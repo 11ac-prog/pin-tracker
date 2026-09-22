@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { resolveImageUrl } from "@/lib/uploads";
 
 function parseOptionalFloat(value: FormDataEntryValue | null): number | null {
   if (!value || value === "") return null;
@@ -10,14 +11,14 @@ function parseOptionalFloat(value: FormDataEntryValue | null): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-function readWishlistFields(formData: FormData) {
+async function readWishlistFields(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Name is required");
 
   return {
     name,
     series: String(formData.get("series") ?? "").trim() || null,
-    imageUrl: String(formData.get("imageUrl") ?? "").trim() || null,
+    imageUrl: await resolveImageUrl(formData, "wishlist"),
     estimatedValue: parseOptionalFloat(formData.get("estimatedValue")),
     priority: Number(formData.get("priority") ?? 2),
     notes: String(formData.get("notes") ?? "").trim() || null,
@@ -25,7 +26,7 @@ function readWishlistFields(formData: FormData) {
 }
 
 export async function createWishlistItem(formData: FormData) {
-  const data = readWishlistFields(formData);
+  const data = await readWishlistFields(formData);
   await prisma.wishlistItem.create({ data });
   revalidatePath("/wishlist");
   redirect("/wishlist");
@@ -34,7 +35,7 @@ export async function createWishlistItem(formData: FormData) {
 export async function updateWishlistItem(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing wishlist item id");
-  const data = readWishlistFields(formData);
+  const data = await readWishlistFields(formData);
   await prisma.wishlistItem.update({ where: { id }, data });
   revalidatePath("/wishlist");
   redirect("/wishlist");

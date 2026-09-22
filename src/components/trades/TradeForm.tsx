@@ -87,7 +87,7 @@ export function TradeForm({
             return (
               <div
                 key={row.key}
-                className="grid grid-cols-1 gap-3 rounded-md border border-neutral-200 p-3 sm:grid-cols-[1fr_1fr_auto]"
+                className="grid grid-cols-1 gap-3 rounded-md border border-neutral-200 p-3 sm:grid-cols-[1fr_auto]"
               >
                 <input
                   type="hidden"
@@ -95,7 +95,7 @@ export function TradeForm({
                   value="GIVEN"
                 />
                 <div>
-                  {idx === 0 ? <label className="mb-1 block text-xs text-neutral-500">From your collection (optional)</label> : null}
+                  {idx === 0 ? <label className="mb-1 block text-xs text-neutral-500">From your collection</label> : null}
                   <select
                     name={`item-${items.indexOf(row)}-pinId`}
                     className={inputClass}
@@ -104,11 +104,11 @@ export function TradeForm({
                       const pin = ownedPins.find((p) => p.id === e.target.value);
                       updateItem(row.key, {
                         pinId: e.target.value,
-                        description: pin ? pin.name : row.description,
+                        description: pin ? pin.name : "",
                       });
                     }}
                   >
-                    <option value="">Not tracked in collection</option>
+                    <option value="">Something not in your collection…</option>
                     {ownedPins.map((pin) => (
                       <option key={pin.id} value={pin.id}>
                         {pin.name}
@@ -119,18 +119,23 @@ export function TradeForm({
                     <p className="mt-1 text-xs text-neutral-500">
                       You paid {formatCurrency(linkedPin.pricePaid)}
                     </p>
+                  ) : (
+                    <input
+                      name={`item-${items.indexOf(row)}-description`}
+                      className={`${inputClass} mt-2`}
+                      placeholder="What you gave"
+                      value={row.description}
+                      onChange={(e) => updateItem(row.key, { description: e.target.value })}
+                      required
+                    />
+                  )}
+                  {linkedPin ? (
+                    <input
+                      type="hidden"
+                      name={`item-${items.indexOf(row)}-description`}
+                      value={row.description}
+                    />
                   ) : null}
-                </div>
-                <div>
-                  {idx === 0 ? <label className="mb-1 block text-xs text-neutral-500">Description</label> : null}
-                  <input
-                    name={`item-${items.indexOf(row)}-description`}
-                    className={inputClass}
-                    placeholder="What you gave"
-                    value={row.description}
-                    onChange={(e) => updateItem(row.key, { description: e.target.value })}
-                    required
-                  />
                 </div>
                 <div className="flex items-start justify-start pt-6 sm:justify-center">
                   <button

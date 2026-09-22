@@ -10,7 +10,7 @@ export function WishlistForm({
   action: (formData: FormData) => void;
 }) {
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} className="space-y-4" encType="multipart/form-data">
       {item ? <input type="hidden" name="id" defaultValue={item.id} /> : null}
 
       <div>
@@ -27,29 +27,48 @@ export function WishlistForm({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className={labelClass} htmlFor="series">
-            Set / Series
-          </label>
-          <input
-            id="series"
-            name="series"
-            defaultValue={item?.series ?? ""}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass} htmlFor="imageUrl">
-            Image URL
-          </label>
-          <input
-            id="imageUrl"
-            name="imageUrl"
-            defaultValue={item?.imageUrl ?? ""}
-            className={inputClass}
-            placeholder="https://..."
-          />
+      <div>
+        <label className={labelClass} htmlFor="series">
+          Set / Series
+        </label>
+        <input
+          id="series"
+          name="series"
+          defaultValue={item?.series ?? ""}
+          className={inputClass}
+        />
+      </div>
+
+      <div>
+        <label className={labelClass}>Photo</label>
+        <div className="flex items-start gap-4">
+          {item?.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.imageUrl}
+              alt=""
+              className="h-20 w-20 shrink-0 rounded-md border border-neutral-200 object-cover"
+            />
+          ) : null}
+          <div className="flex-1 space-y-2">
+            <input
+              id="imageFile"
+              name="imageFile"
+              type="file"
+              accept="image/*"
+              className={`${inputClass} file:mr-3 file:rounded file:border-0 file:bg-neutral-900 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white`}
+            />
+            <p className="text-xs text-neutral-500">
+              Take a photo or choose one from your device, or paste an image URL instead:
+            </p>
+            <input
+              id="imageUrl"
+              name="imageUrl"
+              defaultValue={item?.imageUrl ?? ""}
+              className={inputClass}
+              placeholder="https://..."
+            />
+          </div>
         </div>
       </div>
 

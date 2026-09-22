@@ -15,7 +15,7 @@ export function PinForm({
   action: (formData: FormData) => void;
 }) {
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} className="space-y-4" encType="multipart/form-data">
       {pin ? <input type="hidden" name="id" defaultValue={pin.id} /> : null}
 
       <div>
@@ -32,30 +32,49 @@ export function PinForm({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className={labelClass} htmlFor="series">
-            Set / Series
-          </label>
-          <input
-            id="series"
-            name="series"
-            defaultValue={pin?.series ?? ""}
-            className={inputClass}
-            placeholder="e.g. Hidden Mickey Series 12"
-          />
-        </div>
-        <div>
-          <label className={labelClass} htmlFor="imageUrl">
-            Image URL
-          </label>
-          <input
-            id="imageUrl"
-            name="imageUrl"
-            defaultValue={pin?.imageUrl ?? ""}
-            className={inputClass}
-            placeholder="https://..."
-          />
+      <div>
+        <label className={labelClass} htmlFor="series">
+          Set / Series
+        </label>
+        <input
+          id="series"
+          name="series"
+          defaultValue={pin?.series ?? ""}
+          className={inputClass}
+          placeholder="e.g. Hidden Mickey Series 12"
+        />
+      </div>
+
+      <div>
+        <label className={labelClass}>Photo</label>
+        <div className="flex items-start gap-4">
+          {pin?.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={pin.imageUrl}
+              alt=""
+              className="h-20 w-20 shrink-0 rounded-md border border-neutral-200 object-cover"
+            />
+          ) : null}
+          <div className="flex-1 space-y-2">
+            <input
+              id="imageFile"
+              name="imageFile"
+              type="file"
+              accept="image/*"
+              className={`${inputClass} file:mr-3 file:rounded file:border-0 file:bg-neutral-900 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white`}
+            />
+            <p className="text-xs text-neutral-500">
+              Take a photo or choose one from your device, or paste an image URL instead:
+            </p>
+            <input
+              id="imageUrl"
+              name="imageUrl"
+              defaultValue={pin?.imageUrl ?? ""}
+              className={inputClass}
+              placeholder="https://..."
+            />
+          </div>
         </div>
       </div>
 
