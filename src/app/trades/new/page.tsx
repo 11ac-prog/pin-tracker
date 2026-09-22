@@ -1,13 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { TradeForm } from "@/components/trades/TradeForm";
 import { createTrade } from "../actions";
+import { PinStatus } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewTradePage() {
   const pins = await prisma.pin.findMany({
+    where: { status: PinStatus.OWNED },
     orderBy: { name: "asc" },
-    select: { id: true, name: true },
+    select: { id: true, name: true, pricePaid: true },
   });
 
   return (

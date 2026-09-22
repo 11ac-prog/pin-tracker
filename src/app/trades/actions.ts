@@ -35,7 +35,13 @@ export async function createTrade(formData: FormData) {
     items.push({
       direction,
       description,
-      estimatedValue: parseOptionalFloat(formData.get(`item-${i}-estimatedValue`)),
+      // For a given item, the "value" is what you originally paid for it — filled in
+      // below from the linked pin, never asked for on the form. For a received item,
+      // it's the worth you entered for the incoming pin.
+      estimatedValue:
+        direction === TradeDirection.RECEIVED
+          ? parseOptionalFloat(formData.get(`item-${i}-estimatedValue`))
+          : null,
       pinId:
         direction === TradeDirection.GIVEN
           ? String(formData.get(`item-${i}-pinId`) ?? "") || null
@@ -60,8 +66,9 @@ export async function createTrade(formData: FormData) {
   let hasCostBasis = false;
   for (const item of givenItems) {
     const linkedPin = item.pinId ? linkedPinById.get(item.pinId) : undefined;
-    const cost = linkedPin ? linkedPin.pricePaid : item.estimatedValue;
-    if (cost !== null && cost !== undefined) {
+    const cost = linkedPin?.pricePaid ?? null;
+    item.estimatedValue = cost;
+    if (cost !== null) {
       totalCostBasis += cost;
       hasCostBasis = true;
     }
