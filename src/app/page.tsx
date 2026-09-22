@@ -1,29 +1,40 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { PinStatus } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [pins, wishlistCount, tradeCount] = await Promise.all([
-    prisma.pin.findMany({ orderBy: { createdAt: "desc" } }),
+  const [ownedPins, soldPins, wishlistCount, tradeCount] = await Promise.all([
+    prisma.pin.findMany({ where: { status: PinStatus.OWNED }, orderBy: { createdAt: "desc" } }),
+    prisma.pin.findMany({ where: { status: PinStatus.SOLD } }),
     prisma.wishlistItem.count(),
     prisma.trade.count(),
   ]);
 
-  const totalPaid = pins.reduce((sum, p) => sum + (p.pricePaid ?? 0), 0);
-  const totalWorth = pins.reduce((sum, p) => sum + (p.currentValue ?? p.pricePaid ?? 0), 0);
-  const gain = totalWorth - totalPaid;
-  const recentPins = pins.slice(0, 5);
+  const totalPaid = ownedPins.reduce((sum, p) => sum + (p.pricePaid ?? 0), 0);
+  const totalWorth = ownedPins.reduce((sum, p) => sum + (p.currentValue ?? p.pricePaid ?? 0), 0);
+  const unrealizedGain = totalWorth - totalPaid;
+  const realizedProfit = soldPins.reduce(
+    (sum, p) => sum + ((p.soldPrice ?? 0) - (p.pricePaid ?? 0)),
+    0,
+  );
+  const recentPins = ownedPins.slice(0, 5);
 
   const stats = [
-    { label: "Pins in collection", value: pins.length.toString() },
+    { label: "Pins in collection", value: ownedPins.length.toString() },
     { label: "Total paid", value: formatCurrency(totalPaid) },
     { label: "Estimated worth", value: formatCurrency(totalWorth) },
     {
-      label: "Gain / loss",
-      value: `${gain > 0 ? "+" : ""}${formatCurrency(gain)}`,
-      tone: gain > 0 ? "text-green-600" : gain < 0 ? "text-red-600" : "text-neutral-900",
+      label: "Unrealized gain / loss",
+      value: `${unrealizedGain > 0 ? "+" : ""}${formatCurrency(unrealizedGain)}`,
+      tone: unrealizedGain > 0 ? "text-green-600" : unrealizedGain < 0 ? "text-red-600" : "text-neutral-900",
+    },
+    {
+      label: "Realized profit (sold)",
+      value: `${realizedProfit > 0 ? "+" : ""}${formatCurrency(realizedProfit)}`,
+      tone: realizedProfit > 0 ? "text-green-600" : realizedProfit < 0 ? "text-red-600" : "text-neutral-900",
     },
   ];
 
@@ -36,7 +47,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat) => (
           <div key={stat.label} className="rounded-lg border border-neutral-200 bg-white p-4">
             <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">

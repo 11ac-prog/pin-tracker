@@ -22,6 +22,11 @@ enum TradeDirection {
   RECEIVED
 }
 
+enum PinStatus {
+  OWNED
+  SOLD
+}
+
 model Pin {
   id                String            @id @default(cuid())
   name              String
@@ -32,6 +37,9 @@ model Pin {
   pricePaid         Float?
   currentValue      Float?
   notes             String?
+  status            PinStatus         @default(OWNED)
+  soldPrice         Float?
+  soldDate          DateTime?
   tradeItems        TradeItem[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt

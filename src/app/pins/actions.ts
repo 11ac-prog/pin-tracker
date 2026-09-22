@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { AcquisitionMethod } from "@/generated/prisma/client";
+import { AcquisitionMethod, PinStatus } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -55,6 +55,37 @@ export async function deletePin(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing pin id");
   await prisma.pin.delete({ where: { id } });
+  revalidatePath("/pins");
+  revalidatePath("/");
+}
+
+export async function sellPin(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Missing pin id");
+
+  const soldPrice = parseOptionalFloat(formData.get("soldPrice"));
+  if (soldPrice === null) throw new Error("Sale price is required");
+  const soldDate = parseOptionalDate(formData.get("soldDate")) ?? new Date();
+
+  await prisma.pin.update({
+    where: { id },
+    data: { status: PinStatus.SOLD, soldPrice, soldDate },
+  });
+
+  revalidatePath("/pins");
+  revalidatePath("/");
+  redirect("/pins");
+}
+
+export async function restorePin(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Missing pin id");
+
+  await prisma.pin.update({
+    where: { id },
+    data: { status: PinStatus.OWNED, soldPrice: null, soldDate: null },
+  });
+
   revalidatePath("/pins");
   revalidatePath("/");
 }
