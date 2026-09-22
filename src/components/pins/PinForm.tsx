@@ -1,6 +1,7 @@
 import { AcquisitionMethod, type Pin } from "@/generated/prisma/client";
 import Link from "next/link";
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from "@/components/form";
+import { PhotoPicker } from "@/components/PhotoPicker";
 
 function toDateInputValue(date: Date | null | undefined) {
   if (!date) return "";
@@ -47,35 +48,20 @@ export function PinForm({
 
       <div>
         <label className={labelClass}>Photo</label>
-        <div className="flex items-start gap-4">
-          {pin?.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={pin.imageUrl}
-              alt=""
-              className="h-20 w-20 shrink-0 rounded-md border border-neutral-200 object-cover"
-            />
-          ) : null}
-          <div className="flex-1 space-y-2">
-            <input
-              id="imageFile"
-              name="imageFile"
-              type="file"
-              accept="image/*"
-              className={`${inputClass} file:mr-3 file:rounded file:border-0 file:bg-neutral-900 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white`}
-            />
-            <p className="text-xs text-neutral-500">
-              Take a photo or choose one from your device, or paste an image URL instead:
-            </p>
-            <input
-              id="imageUrl"
-              name="imageUrl"
-              defaultValue={pin?.imageUrl ?? ""}
-              className={inputClass}
-              placeholder="https://..."
-            />
-          </div>
-        </div>
+        <input type="hidden" name="currentImageUrl" defaultValue={pin?.imageUrl ?? ""} />
+        <PhotoPicker initialImageUrl={pin?.imageUrl} />
+        <details className="mt-2" open={Boolean(pin?.imageUrl && !pin.imageUrl.startsWith("/uploads/"))}>
+          <summary className="cursor-pointer text-xs text-neutral-500">
+            Or paste an image URL instead
+          </summary>
+          <input
+            id="imageUrl"
+            name="imageUrl"
+            defaultValue={pin?.imageUrl && !pin.imageUrl.startsWith("/uploads/") ? pin.imageUrl : ""}
+            className={`${inputClass} mt-2`}
+            placeholder="https://..."
+          />
+        </details>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

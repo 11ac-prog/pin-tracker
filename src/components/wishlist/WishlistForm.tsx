@@ -1,6 +1,7 @@
 import type { WishlistItem } from "@/generated/prisma/client";
 import Link from "next/link";
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from "@/components/form";
+import { PhotoPicker } from "@/components/PhotoPicker";
 
 export function WishlistForm({
   item,
@@ -41,35 +42,20 @@ export function WishlistForm({
 
       <div>
         <label className={labelClass}>Photo</label>
-        <div className="flex items-start gap-4">
-          {item?.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.imageUrl}
-              alt=""
-              className="h-20 w-20 shrink-0 rounded-md border border-neutral-200 object-cover"
-            />
-          ) : null}
-          <div className="flex-1 space-y-2">
-            <input
-              id="imageFile"
-              name="imageFile"
-              type="file"
-              accept="image/*"
-              className={`${inputClass} file:mr-3 file:rounded file:border-0 file:bg-neutral-900 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white`}
-            />
-            <p className="text-xs text-neutral-500">
-              Take a photo or choose one from your device, or paste an image URL instead:
-            </p>
-            <input
-              id="imageUrl"
-              name="imageUrl"
-              defaultValue={item?.imageUrl ?? ""}
-              className={inputClass}
-              placeholder="https://..."
-            />
-          </div>
-        </div>
+        <input type="hidden" name="currentImageUrl" defaultValue={item?.imageUrl ?? ""} />
+        <PhotoPicker initialImageUrl={item?.imageUrl} />
+        <details className="mt-2" open={Boolean(item?.imageUrl && !item.imageUrl.startsWith("/uploads/"))}>
+          <summary className="cursor-pointer text-xs text-neutral-500">
+            Or paste an image URL instead
+          </summary>
+          <input
+            id="imageUrl"
+            name="imageUrl"
+            defaultValue={item?.imageUrl && !item.imageUrl.startsWith("/uploads/") ? item.imageUrl : ""}
+            className={`${inputClass} mt-2`}
+            placeholder="https://..."
+          />
+        </details>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

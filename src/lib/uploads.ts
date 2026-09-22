@@ -30,7 +30,9 @@ export async function saveUploadedImage(file: File, subdir: string): Promise<str
 }
 
 // Resolves the image to save for a form: an uploaded file (if any) wins over
-// a pasted URL, which wins over whatever was already there.
+// a pasted URL, which wins over whatever was already there (carried through
+// the form as a hidden "currentImageUrl" field so editing without touching
+// the photo doesn't clear it).
 export async function resolveImageUrl(formData: FormData, subdir: string): Promise<string | null> {
   const file = formData.get("imageFile");
   if (file instanceof File && file.size > 0) {
@@ -39,5 +41,8 @@ export async function resolveImageUrl(formData: FormData, subdir: string): Promi
   }
 
   const url = String(formData.get("imageUrl") ?? "").trim();
-  return url || null;
+  if (url) return url;
+
+  const current = String(formData.get("currentImageUrl") ?? "").trim();
+  return current || null;
 }
