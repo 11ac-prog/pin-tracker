@@ -30,11 +30,21 @@ function newRow(direction: TradeItemRow["direction"]): TradeItemRow {
 export function TradeForm({
   action,
   ownedPins,
+  initialGivenPinId,
 }: {
   action: (formData: FormData) => void;
   ownedPins: { id: string; name: string; pricePaid: number | null }[];
+  initialGivenPinId?: string;
 }) {
-  const [items, setItems] = useState<TradeItemRow[]>([newRow("GIVEN"), newRow("RECEIVED")]);
+  const [items, setItems] = useState<TradeItemRow[]>(() => {
+    const givenRow = newRow("GIVEN");
+    const preselected = ownedPins.find((p) => p.id === initialGivenPinId);
+    if (preselected) {
+      givenRow.pinId = preselected.id;
+      givenRow.description = preselected.name;
+    }
+    return [givenRow, newRow("RECEIVED")];
+  });
 
   function updateItem(key: string, patch: Partial<TradeItemRow>) {
     setItems((prev) => prev.map((row) => (row.key === key ? { ...row, ...patch } : row)));

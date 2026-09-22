@@ -23,6 +23,12 @@ function PinActions({ pin }: { pin: Pin }) {
   return (
     <div className="flex items-center gap-3">
       <Link
+        href={`/trades/new?givenPinId=${pin.id}`}
+        className="text-sm font-medium text-sky-700 hover:text-sky-900"
+      >
+        Trade
+      </Link>
+      <Link
         href={`/pins/${pin.id}/sell`}
         className="text-sm font-medium text-emerald-700 hover:text-emerald-900"
       >
