@@ -11,6 +11,14 @@ function parseOptionalFloat(value: FormDataEntryValue | null): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+type ParsedItem = {
+  direction: TradeDirection;
+  description: string;
+  estimatedValue: number | null;
+  pinId: string | null;
+  addToCollection: boolean;
+};
+
 export async function createTrade(formData: FormData) {
   const dateRaw = String(formData.get("date") ?? "");
   const date = dateRaw ? new Date(dateRaw) : new Date();
@@ -18,60 +26,108 @@ export async function createTrade(formData: FormData) {
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const itemCount = Number(formData.get("itemCount") ?? 0);
 
-  const trade = await prisma.trade.create({
-    data: { date, partnerName, notes },
-  });
-
+  const items: ParsedItem[] = [];
   for (let i = 0; i < itemCount; i++) {
     const direction = formData.get(`item-${i}-direction`) as TradeDirection | null;
     const description = String(formData.get(`item-${i}-description`) ?? "").trim();
     if (!direction || !description) continue;
 
-    const estimatedValue = parseOptionalFloat(formData.get(`item-${i}-estimatedValue`));
+    items.push({
+      direction,
+      description,
+      estimatedValue: parseOptionalFloat(formData.get(`item-${i}-estimatedValue`)),
+      pinId:
+        direction === TradeDirection.GIVEN
+          ? String(formData.get(`item-${i}-pinId`) ?? "") || null
+          : null,
+      addToCollection:
+        direction === TradeDirection.RECEIVED &&
+        formData.get(`item-${i}-addToCollection`) === "on",
+    });
+  }
 
-    if (direction === TradeDirection.GIVEN) {
-      const linkedPinId = String(formData.get(`item-${i}-pinId`) ?? "") || null;
+  const givenItems = items.filter((item) => item.direction === TradeDirection.GIVEN);
+  const receivedItems = items.filter((item) => item.direction === TradeDirection.RECEIVED);
 
-      await prisma.tradeItem.create({
-        data: {
-          tradeId: trade.id,
-          direction,
-          description,
-          estimatedValue,
-          pinId: linkedPinId,
-        },
-      });
+  // What you originally paid for the pins you're giving up carries over to what you get
+  // back, so "paid" keeps tracking your real out-of-pocket cost across trades.
+  const linkedPins = await prisma.pin.findMany({
+    where: { id: { in: givenItems.map((item) => item.pinId).filter((id): id is string => !!id) } },
+  });
+  const linkedPinById = new Map(linkedPins.map((pin) => [pin.id, pin]));
 
-      if (linkedPinId) {
-        await prisma.pin.delete({ where: { id: linkedPinId } }).catch(() => {});
-      }
-    } else {
-      const addToCollection = formData.get(`item-${i}-addToCollection`) === "on";
-      let newPinId: string | null = null;
-
-      if (addToCollection) {
-        const newPin = await prisma.pin.create({
-          data: {
-            name: description,
-            acquisitionDate: date,
-            acquisitionMethod: AcquisitionMethod.TRADED,
-            currentValue: estimatedValue,
-            notes: partnerName ? `Traded with ${partnerName}` : null,
-          },
-        });
-        newPinId = newPin.id;
-      }
-
-      await prisma.tradeItem.create({
-        data: {
-          tradeId: trade.id,
-          direction,
-          description,
-          estimatedValue,
-          pinId: newPinId,
-        },
-      });
+  let totalCostBasis = 0;
+  let hasCostBasis = false;
+  for (const item of givenItems) {
+    const linkedPin = item.pinId ? linkedPinById.get(item.pinId) : undefined;
+    const cost = linkedPin ? linkedPin.pricePaid : item.estimatedValue;
+    if (cost !== null && cost !== undefined) {
+      totalCostBasis += cost;
+      hasCostBasis = true;
     }
+  }
+
+  const receivedToCollection = receivedItems.filter((item) => item.addToCollection);
+  const totalReceivedValue = receivedToCollection.reduce(
+    (sum, item) => sum + (item.estimatedValue ?? 0),
+    0,
+  );
+
+  function costBasisFor(item: ParsedItem): number | null {
+    if (!hasCostBasis || receivedToCollection.length === 0) return null;
+    if (receivedToCollection.length === 1) return totalCostBasis;
+    if (totalReceivedValue > 0) {
+      return totalCostBasis * ((item.estimatedValue ?? 0) / totalReceivedValue);
+    }
+    return totalCostBasis / receivedToCollection.length;
+  }
+
+  const trade = await prisma.trade.create({
+    data: { date, partnerName, notes },
+  });
+
+  for (const item of givenItems) {
+    await prisma.tradeItem.create({
+      data: {
+        tradeId: trade.id,
+        direction: item.direction,
+        description: item.description,
+        estimatedValue: item.estimatedValue,
+        pinId: item.pinId,
+      },
+    });
+
+    if (item.pinId) {
+      await prisma.pin.delete({ where: { id: item.pinId } }).catch(() => {});
+    }
+  }
+
+  for (const item of receivedItems) {
+    let newPinId: string | null = null;
+
+    if (item.addToCollection) {
+      const newPin = await prisma.pin.create({
+        data: {
+          name: item.description,
+          acquisitionDate: date,
+          acquisitionMethod: AcquisitionMethod.TRADED,
+          pricePaid: costBasisFor(item),
+          currentValue: item.estimatedValue,
+          notes: partnerName ? `Traded with ${partnerName}` : null,
+        },
+      });
+      newPinId = newPin.id;
+    }
+
+    await prisma.tradeItem.create({
+      data: {
+        tradeId: trade.id,
+        direction: item.direction,
+        description: item.description,
+        estimatedValue: item.estimatedValue,
+        pinId: newPinId,
+      },
+    });
   }
 
   revalidatePath("/trades");

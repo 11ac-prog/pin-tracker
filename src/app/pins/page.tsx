@@ -4,11 +4,48 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { deletePin } from "./actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { primaryButtonClass } from "@/components/form";
-import { PinStatus } from "@/generated/prisma/client";
+import { PinStatus, type Pin } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
-export default async function PinsPage() {
+function gainToneClass(gain: number | null) {
+  if (gain === null) return "text-neutral-400";
+  if (gain > 0) return "text-green-600";
+  if (gain < 0) return "text-red-600";
+  return "text-neutral-500";
+}
+
+function gainLabel(gain: number | null) {
+  return gain === null ? "—" : `${gain > 0 ? "+" : ""}${formatCurrency(gain)}`;
+}
+
+function PinActions({ pin }: { pin: Pin }) {
+  return (
+    <div className="flex items-center gap-3">
+      <Link
+        href={`/pins/${pin.id}/sell`}
+        className="text-sm font-medium text-emerald-700 hover:text-emerald-900"
+      >
+        Sell
+      </Link>
+      <Link
+        href={`/pins/${pin.id}/edit`}
+        className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
+      >
+        Edit
+      </Link>
+      <form action={deletePin}>
+        <input type="hidden" name="id" value={pin.id} />
+        <DeleteButton confirmText={`Delete "${pin.name}" from your collection?`} />
+      </form>
+    </div>
+  );
+}
+
+export default async function PinsPage(props: PageProps<"/pins">) {
+  const searchParams = await props.searchParams;
+  const view = searchParams.view === "cards" ? "cards" : "list";
+
   const pins = await prisma.pin.findMany({
     where: { status: PinStatus.OWNED },
     orderBy: { createdAt: "desc" },
@@ -16,16 +53,36 @@ export default async function PinsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Collection</h1>
           <p className="text-sm text-neutral-500">
             {pins.length} pin{pins.length === 1 ? "" : "s"} tracked
           </p>
         </div>
-        <Link href="/pins/new" className={primaryButtonClass}>
-          + Add pin
-        </Link>
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-md border border-neutral-300 bg-white p-0.5 text-sm">
+            <Link
+              href="/pins?view=list"
+              className={`rounded px-3 py-1 font-medium ${
+                view === "list" ? "bg-neutral-900 text-white" : "text-neutral-600 hover:text-neutral-900"
+              }`}
+            >
+              List
+            </Link>
+            <Link
+              href="/pins?view=cards"
+              className={`rounded px-3 py-1 font-medium ${
+                view === "cards" ? "bg-neutral-900 text-white" : "text-neutral-600 hover:text-neutral-900"
+              }`}
+            >
+              Cards
+            </Link>
+          </div>
+          <Link href="/pins/new" className={primaryButtonClass}>
+            + Add pin
+          </Link>
+        </div>
       </div>
 
       {pins.length === 0 ? (
@@ -35,6 +92,63 @@ export default async function PinsPage() {
             Add your first pin
           </Link>
           .
+        </div>
+      ) : view === "cards" ? (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {pins.map((pin) => {
+            const gain =
+              pin.currentValue !== null && pin.pricePaid !== null
+                ? pin.currentValue - pin.pricePaid
+                : null;
+            return (
+              <div
+                key={pin.id}
+                className="flex flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white"
+              >
+                {pin.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={pin.imageUrl}
+                    alt=""
+                    className="aspect-square w-full border-b border-neutral-200 object-cover"
+                  />
+                ) : (
+                  <div className="flex aspect-square w-full items-center justify-center border-b border-neutral-200 bg-neutral-50 text-5xl">
+                    📌
+                  </div>
+                )}
+                <div className="flex flex-1 flex-col gap-3 p-4">
+                  <div>
+                    <div className="font-medium text-neutral-900">{pin.name}</div>
+                    {pin.series ? (
+                      <div className="text-xs text-neutral-500">{pin.series}</div>
+                    ) : null}
+                  </div>
+
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+                    <dt className="text-neutral-500">Acquired</dt>
+                    <dd className="text-right text-neutral-700">{formatDate(pin.acquisitionDate)}</dd>
+                    <dt className="text-neutral-500">Method</dt>
+                    <dd className="text-right text-neutral-700">
+                      {pin.acquisitionMethod[0] + pin.acquisitionMethod.slice(1).toLowerCase()}
+                    </dd>
+                    <dt className="text-neutral-500">Paid</dt>
+                    <dd className="text-right text-neutral-700">{formatCurrency(pin.pricePaid)}</dd>
+                    <dt className="text-neutral-500">Worth</dt>
+                    <dd className="text-right text-neutral-700">{formatCurrency(pin.currentValue)}</dd>
+                    <dt className="text-neutral-500">Gain / Loss</dt>
+                    <dd className={`text-right font-medium ${gainToneClass(gain)}`}>
+                      {gainLabel(gain)}
+                    </dd>
+                  </dl>
+
+                  <div className="mt-auto flex items-center justify-end border-t border-neutral-100 pt-3">
+                    <PinActions pin={pin} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
@@ -92,37 +206,12 @@ export default async function PinsPage() {
                     <td className="px-4 py-3 text-right text-neutral-600">
                       {formatCurrency(pin.currentValue)}
                     </td>
-                    <td
-                      className={`px-4 py-3 text-right font-medium ${
-                        gain === null
-                          ? "text-neutral-400"
-                          : gain > 0
-                            ? "text-green-600"
-                            : gain < 0
-                              ? "text-red-600"
-                              : "text-neutral-500"
-                      }`}
-                    >
-                      {gain === null ? "—" : `${gain > 0 ? "+" : ""}${formatCurrency(gain)}`}
+                    <td className={`px-4 py-3 text-right font-medium ${gainToneClass(gain)}`}>
+                      {gainLabel(gain)}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-3">
-                        <Link
-                          href={`/pins/${pin.id}/sell`}
-                          className="text-sm font-medium text-emerald-700 hover:text-emerald-900"
-                        >
-                          Sell
-                        </Link>
-                        <Link
-                          href={`/pins/${pin.id}/edit`}
-                          className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
-                        >
-                          Edit
-                        </Link>
-                        <form action={deletePin}>
-                          <input type="hidden" name="id" value={pin.id} />
-                          <DeleteButton confirmText={`Delete "${pin.name}" from your collection?`} />
-                        </form>
+                      <div className="flex justify-end">
+                        <PinActions pin={pin} />
                       </div>
                     </td>
                   </tr>
