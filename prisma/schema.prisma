@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum AcquisitionMethod {
+  BOUGHT
+  TRADED
+  GIFTED
+  OTHER
+}
+
+enum TradeDirection {
+  GIVEN
+  RECEIVED
+}
+
+model Pin {
+  id                String            @id @default(cuid())
+  name              String
+  series            String?
+  imageUrl          String?
+  acquisitionDate   DateTime?
+  acquisitionMethod AcquisitionMethod @default(BOUGHT)
+  pricePaid         Float?
+  currentValue      Float?
+  notes             String?
+  tradeItems        TradeItem[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model WishlistItem {
+  id             String   @id @default(cuid())
+  name           String
+  series         String?
+  imageUrl       String?
+  estimatedValue Float?
+  priority       Int      @default(2)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Trade {
+  id          String      @id @default(cuid())
+  date        DateTime    @default(now())
+  partnerName String?
+  notes       String?
+  items       TradeItem[]
+  createdAt   DateTime    @default(now())
+}
+
+model TradeItem {
+  id             String         @id @default(cuid())
+  trade          Trade          @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tradeId        String
+  direction      TradeDirection
+  description    String
+  estimatedValue Float?
+  pin            Pin?           @relation(fields: [pinId], references: [id])
+  pinId          String?
+}
