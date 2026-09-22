@@ -22,6 +22,7 @@ const navLinks = [
   { href: "/", label: "Dashboard" },
   { href: "/pins", label: "Collection" },
   { href: "/trades", label: "Trades" },
+  { href: "/sold", label: "Sold" },
   { href: "/wishlist", label: "Wishlist" },
 ];
 

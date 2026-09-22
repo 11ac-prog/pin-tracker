@@ -73,8 +73,9 @@ export async function sellPin(formData: FormData) {
   });
 
   revalidatePath("/pins");
+  revalidatePath("/sold");
   revalidatePath("/");
-  redirect("/pins");
+  redirect("/sold");
 }
 
 export async function restorePin(formData: FormData) {
@@ -87,5 +88,6 @@ export async function restorePin(formData: FormData) {
   });
 
   revalidatePath("/pins");
+  revalidatePath("/sold");
   revalidatePath("/");
 }
