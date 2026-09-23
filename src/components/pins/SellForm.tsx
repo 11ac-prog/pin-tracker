@@ -13,6 +13,27 @@ export function SellForm({
     <form action={action} className="space-y-4">
       <input type="hidden" name="id" defaultValue={pin.id} />
 
+      {pin.quantity > 1 ? (
+        <div>
+          <label className={labelClass} htmlFor="soldQuantity">
+            Quantity to sell (of {pin.quantity})
+          </label>
+          <input
+            id="soldQuantity"
+            name="soldQuantity"
+            type="number"
+            step="1"
+            min="1"
+            max={pin.quantity}
+            defaultValue={pin.quantity}
+            className={inputClass}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            Selling fewer than {pin.quantity} keeps the rest in your collection as their own entry.
+          </p>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass} htmlFor="soldPrice">
@@ -61,7 +82,10 @@ export function SellForm({
       </div>
 
       {pin.pricePaid !== null ? (
-        <p className="text-sm text-slate-500">Originally paid {"$" + pin.pricePaid.toFixed(2)} for this pin.</p>
+        <p className="text-sm text-slate-500">
+          Originally paid {"$" + pin.pricePaid.toFixed(2)}
+          {pin.quantity > 1 ? ` total for all ${pin.quantity}.` : " for this pin."}
+        </p>
       ) : null}
 
       <div className="flex gap-3 pt-2">

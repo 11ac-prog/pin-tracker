@@ -91,6 +91,11 @@ export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-bold tracking-tight text-slate-100">{pin.name}</h1>
+                {pin.quantity > 1 ? (
+                  <span className="rounded bg-white/10 px-2 py-0.5 text-xs font-bold text-slate-300">
+                    ×{pin.quantity}
+                  </span>
+                ) : null}
                 <MethodBadge method={pin.acquisitionMethod} />
                 {pin.status === PinStatus.SOLD ? (
                   <span className="inline-flex items-center rounded border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
@@ -110,13 +115,20 @@ export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
               </div>
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Paid
+                  Quantity
+                </dt>
+                <dd className="mt-1 text-slate-200">{pin.quantity}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Paid{pin.quantity > 1 ? " (total)" : ""}
                 </dt>
                 <dd className="mt-1 text-slate-200">{formatCurrency(pin.pricePaid)}</dd>
               </div>
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   {pin.status === PinStatus.SOLD ? "Sold for" : "Current worth"}
+                  {pin.quantity > 1 ? " (total)" : ""}
                 </dt>
                 <dd className="mt-1 text-slate-200">
                   {formatCurrency(pin.status === PinStatus.SOLD ? pin.soldPrice : pin.currentValue)}
@@ -190,6 +202,7 @@ export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
               <div className="text-sm text-slate-400">
                 {formatDate(receivedItem.trade.date)}
                 {receivedItem.trade.partnerName ? ` — with ${receivedItem.trade.partnerName}` : ""}
+                {receivedItem.quantity > 1 ? ` (received ×${receivedItem.quantity})` : ""}
               </div>
 
               <div>
@@ -214,6 +227,7 @@ export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium text-slate-200">
                           {item.description}
+                          {item.quantity > 1 ? ` ×${item.quantity}` : ""}
                         </div>
                         <div className="text-xs text-slate-500">
                           {formatCurrency(item.estimatedValue)}

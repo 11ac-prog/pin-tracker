@@ -10,6 +10,7 @@ type TradeItemRow = {
   direction: "GIVEN" | "RECEIVED";
   description: string;
   estimatedValue: string;
+  quantity: string;
   pinId: string;
   addToCollection: boolean;
 };
@@ -22,6 +23,7 @@ function newRow(direction: TradeItemRow["direction"]): TradeItemRow {
     direction,
     description: "",
     estimatedValue: "",
+    quantity: "1",
     pinId: "",
     addToCollection: true,
   };
@@ -33,7 +35,7 @@ export function TradeForm({
   initialGivenPinId,
 }: {
   action: (formData: FormData) => void;
-  ownedPins: { id: string; name: string; pricePaid: number | null }[];
+  ownedPins: { id: string; name: string; pricePaid: number | null; quantity: number }[];
   initialGivenPinId?: string;
 }) {
   const [items, setItems] = useState<TradeItemRow[]>(() => {
@@ -42,6 +44,7 @@ export function TradeForm({
     if (preselected) {
       givenRow.pinId = preselected.id;
       givenRow.description = preselected.name;
+      givenRow.quantity = String(preselected.quantity);
     }
     return [givenRow, newRow("RECEIVED")];
   });
@@ -97,7 +100,7 @@ export function TradeForm({
             return (
               <div
                 key={row.key}
-                className="grid grid-cols-1 gap-3 rounded-md border border-white/10 p-3 sm:grid-cols-[1fr_auto]"
+                className="grid grid-cols-1 gap-3 rounded-md border border-white/10 p-3 sm:grid-cols-[1fr_90px_auto]"
               >
                 <input
                   type="hidden"
@@ -115,6 +118,7 @@ export function TradeForm({
                       updateItem(row.key, {
                         pinId: e.target.value,
                         description: pin ? pin.name : "",
+                        quantity: pin ? String(pin.quantity) : "1",
                       });
                     }}
                   >
@@ -122,12 +126,14 @@ export function TradeForm({
                     {ownedPins.map((pin) => (
                       <option key={pin.id} value={pin.id}>
                         {pin.name}
+                        {pin.quantity > 1 ? ` (×${pin.quantity})` : ""}
                       </option>
                     ))}
                   </select>
                   {linkedPin ? (
                     <p className="mt-1 text-xs text-slate-500">
                       You paid {formatCurrency(linkedPin.pricePaid)}
+                      {linkedPin.quantity > 1 ? ` total for all ${linkedPin.quantity}` : ""}
                     </p>
                   ) : (
                     <input
@@ -146,6 +152,27 @@ export function TradeForm({
                       value={row.description}
                     />
                   ) : null}
+                </div>
+                <div>
+                  {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">Qty</label> : null}
+                  {linkedPin && linkedPin.quantity > 1 ? (
+                    <input
+                      name={`item-${items.indexOf(row)}-quantity`}
+                      type="number"
+                      step="1"
+                      min="1"
+                      max={linkedPin.quantity}
+                      className={inputClass}
+                      value={row.quantity}
+                      onChange={(e) => updateItem(row.key, { quantity: e.target.value })}
+                    />
+                  ) : (
+                    <input
+                      type="hidden"
+                      name={`item-${items.indexOf(row)}-quantity`}
+                      value="1"
+                    />
+                  )}
                 </div>
                 <div className="flex items-start justify-start pt-6 sm:justify-center">
                   <button
@@ -175,7 +202,7 @@ export function TradeForm({
           .map((row, idx) => (
             <div
               key={row.key}
-              className="grid grid-cols-1 gap-3 rounded-md border border-white/10 p-3 sm:grid-cols-[1fr_140px_auto_auto]"
+              className="grid grid-cols-1 gap-3 rounded-md border border-white/10 p-3 sm:grid-cols-[1fr_70px_120px_auto_auto]"
             >
               <input
                 type="hidden"
@@ -194,7 +221,21 @@ export function TradeForm({
                 />
               </div>
               <div>
-                {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">Value ($)</label> : null}
+                {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">Qty</label> : null}
+                <input
+                  name={`item-${items.indexOf(row)}-quantity`}
+                  type="number"
+                  step="1"
+                  min="1"
+                  className={inputClass}
+                  value={row.quantity}
+                  onChange={(e) => updateItem(row.key, { quantity: e.target.value })}
+                />
+              </div>
+              <div>
+                {idx === 0 ? (
+                  <label className="mb-1 block text-xs text-slate-500">Value ($ total)</label>
+                ) : null}
                 <input
                   name={`item-${items.indexOf(row)}-estimatedValue`}
                   type="number"

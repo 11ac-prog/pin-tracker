@@ -115,7 +115,14 @@ export default async function SoldPage() {
                               </div>
                             )}
                             <div>
-                              <div className="font-semibold text-slate-100">{pin.name}</div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-100">{pin.name}</span>
+                                {pin.quantity > 1 ? (
+                                  <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
+                                    ×{pin.quantity}
+                                  </span>
+                                ) : null}
+                              </div>
                               {pin.series ? (
                                 <div className="text-xs text-slate-500">{pin.series}</div>
                               ) : null}

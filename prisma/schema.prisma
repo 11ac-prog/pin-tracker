@@ -34,6 +34,7 @@ model Pin {
   imageUrl          String?
   acquisitionDate   DateTime?
   acquisitionMethod AcquisitionMethod @default(BOUGHT)
+  quantity          Int               @default(1)
   pricePaid         Float?
   currentValue      Float?
   notes             String?
@@ -75,6 +76,7 @@ model TradeItem {
   direction      TradeDirection
   description    String
   imageUrl       String?
+  quantity       Int            @default(1)
   estimatedValue Float?
   pin            Pin?           @relation(fields: [pinId], references: [id])
   pinId          String?

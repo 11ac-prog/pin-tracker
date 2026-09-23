@@ -11,10 +11,17 @@ function parseOptionalFloat(value: FormDataEntryValue | null): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+function parsePositiveInt(value: FormDataEntryValue | null, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.round(parsed);
+}
+
 type ParsedItem = {
   direction: TradeDirection;
   description: string;
   estimatedValue: number | null;
+  quantity: number;
   pinId: string | null;
   addToCollection: boolean;
 };
@@ -38,11 +45,12 @@ export async function createTrade(formData: FormData) {
       description,
       // For a given item, the "value" is what you originally paid for it — filled in
       // below from the linked pin, never asked for on the form. For a received item,
-      // it's the worth you entered for the incoming pin.
+      // it's the worth you entered for the incoming pin(s).
       estimatedValue:
         direction === TradeDirection.RECEIVED
           ? parseOptionalFloat(formData.get(`item-${i}-estimatedValue`))
           : null,
+      quantity: parsePositiveInt(formData.get(`item-${i}-quantity`), 1),
       pinId:
         direction === TradeDirection.GIVEN
           ? String(formData.get(`item-${i}-pinId`) ?? "") || null
@@ -67,7 +75,10 @@ export async function createTrade(formData: FormData) {
   let hasCostBasis = false;
   for (const item of givenItems) {
     const linkedPin = item.pinId ? linkedPinById.get(item.pinId) : undefined;
-    const cost = linkedPin?.pricePaid ?? null;
+    // Clamp to what's actually available, and price just the portion given away.
+    item.quantity = linkedPin ? Math.min(item.quantity, linkedPin.quantity) : 1;
+    const pricePerUnit = linkedPin?.pricePaid != null ? linkedPin.pricePaid / linkedPin.quantity : null;
+    const cost = pricePerUnit !== null ? pricePerUnit * item.quantity : null;
     item.estimatedValue = cost;
     if (cost !== null) {
       totalCostBasis += cost;
@@ -102,17 +113,37 @@ export async function createTrade(formData: FormData) {
         tradeId: trade.id,
         direction: item.direction,
         description: item.description,
-        // Snapshot the photo now, since the pin row (and its image) gets
-        // deleted right after — this is what lets a pin's detail page show
-        // pictures of what was traded away for it, later.
+        // Snapshot the photo now, since a fully-given-away pin's row (and its
+        // image) gets deleted right after — this is what lets a pin's detail
+        // page show pictures of what was traded away for it, later.
         imageUrl: linkedPin?.imageUrl ?? null,
         estimatedValue: item.estimatedValue,
+        quantity: item.quantity,
         pinId: item.pinId,
       },
     });
 
-    if (item.pinId) {
-      await prisma.pin.delete({ where: { id: item.pinId } }).catch(() => {});
+    if (linkedPin) {
+      if (item.quantity >= linkedPin.quantity) {
+        await prisma.pin.delete({ where: { id: linkedPin.id } }).catch(() => {});
+      } else {
+        // Giving away part of a multi-quantity pin: shrink what's left,
+        // proportioning cost/worth by unit rather than deleting the row.
+        const remainingQuantity = linkedPin.quantity - item.quantity;
+        const pricePerUnit =
+          linkedPin.pricePaid !== null ? linkedPin.pricePaid / linkedPin.quantity : null;
+        const worthPerUnit =
+          linkedPin.currentValue !== null ? linkedPin.currentValue / linkedPin.quantity : null;
+
+        await prisma.pin.update({
+          where: { id: linkedPin.id },
+          data: {
+            quantity: remainingQuantity,
+            pricePaid: pricePerUnit !== null ? pricePerUnit * remainingQuantity : null,
+            currentValue: worthPerUnit !== null ? worthPerUnit * remainingQuantity : null,
+          },
+        });
+      }
     }
   }
 
@@ -125,6 +156,7 @@ export async function createTrade(formData: FormData) {
           name: item.description,
           acquisitionDate: date,
           acquisitionMethod: AcquisitionMethod.TRADED,
+          quantity: item.quantity,
           pricePaid: costBasisFor(item),
           currentValue: item.estimatedValue,
           notes: partnerName ? `Traded with ${partnerName}` : null,
@@ -139,6 +171,7 @@ export async function createTrade(formData: FormData) {
         direction: item.direction,
         description: item.description,
         estimatedValue: item.estimatedValue,
+        quantity: item.quantity,
         pinId: newPinId,
       },
     });

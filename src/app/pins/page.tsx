@@ -133,8 +133,15 @@ export default async function PinsPage(props: PageProps<"/pins">) {
                 </Link>
                 <div className="flex flex-1 flex-col gap-3 p-4">
                   <Link href={`/pins/${pin.id}`} className="group">
-                    <div className="font-semibold text-slate-100 group-hover:text-emerald-300">
-                      {pin.name}
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-slate-100 group-hover:text-emerald-300">
+                        {pin.name}
+                      </span>
+                      {pin.quantity > 1 ? (
+                        <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
+                          ×{pin.quantity}
+                        </span>
+                      ) : null}
                     </div>
                     {pin.series ? (
                       <div className="text-xs text-slate-500">{pin.series}</div>
@@ -204,8 +211,15 @@ export default async function PinsPage(props: PageProps<"/pins">) {
                             </div>
                           )}
                           <div>
-                            <div className="font-semibold text-slate-100 group-hover:text-emerald-300">
-                              {pin.name}
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-slate-100 group-hover:text-emerald-300">
+                                {pin.name}
+                              </span>
+                              {pin.quantity > 1 ? (
+                                <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
+                                  ×{pin.quantity}
+                                </span>
+                              ) : null}
                             </div>
                             {pin.series ? (
                               <div className="text-xs text-slate-500">{pin.series}</div>

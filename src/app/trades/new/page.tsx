@@ -13,7 +13,7 @@ export default async function NewTradePage(props: PageProps<"/trades/new">) {
   const pins = await prisma.pin.findMany({
     where: { status: PinStatus.OWNED },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, pricePaid: true },
+    select: { id: true, name: true, pricePaid: true, quantity: true },
   });
 
   return (

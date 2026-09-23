@@ -71,7 +71,10 @@ export default async function TradesPage() {
                     <ul className="mt-1 space-y-1 text-sm text-slate-300">
                       {given.map((i) => (
                         <li key={i.id} className="flex justify-between">
-                          <span>{i.description}</span>
+                          <span>
+                            {i.description}
+                            {i.quantity > 1 ? ` ×${i.quantity}` : ""}
+                          </span>
                           <span className="text-slate-500">{formatCurrency(i.estimatedValue)}</span>
                         </li>
                       ))}
@@ -84,7 +87,10 @@ export default async function TradesPage() {
                     <ul className="mt-1 space-y-1 text-sm text-slate-300">
                       {received.map((i) => (
                         <li key={i.id} className="flex justify-between">
-                          <span>{i.description}</span>
+                          <span>
+                            {i.description}
+                            {i.quantity > 1 ? ` ×${i.quantity}` : ""}
+                          </span>
                           <span className="text-slate-500">{formatCurrency(i.estimatedValue)}</span>
                         </li>
                       ))}

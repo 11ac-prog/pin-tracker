@@ -18,6 +18,12 @@ function parseOptionalDate(value: FormDataEntryValue | null): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function parsePositiveInt(value: FormDataEntryValue | null, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.round(parsed);
+}
+
 async function readPinFields(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Name is required");
@@ -28,6 +34,7 @@ async function readPinFields(formData: FormData) {
     imageUrl: await resolveImageUrl(formData, "pins"),
     acquisitionDate: parseOptionalDate(formData.get("acquisitionDate")),
     acquisitionMethod: (formData.get("acquisitionMethod") as AcquisitionMethod) || AcquisitionMethod.BOUGHT,
+    quantity: parsePositiveInt(formData.get("quantity"), 1),
     pricePaid: parseOptionalFloat(formData.get("pricePaid")),
     currentValue: parseOptionalFloat(formData.get("currentValue")),
     notes: String(formData.get("notes") ?? "").trim() || null,
@@ -69,10 +76,58 @@ export async function sellPin(formData: FormData) {
   const soldDate = parseOptionalDate(formData.get("soldDate")) ?? new Date();
   const shippingCost = parseOptionalFloat(formData.get("shippingCost"));
 
-  await prisma.pin.update({
-    where: { id },
-    data: { status: PinStatus.SOLD, soldPrice, soldDate, shippingCost },
-  });
+  const pin = await prisma.pin.findUnique({ where: { id } });
+  if (!pin) throw new Error("Pin not found");
+
+  const requestedQuantity = parseOptionalFloat(formData.get("soldQuantity"));
+  const soldQuantity = Math.min(
+    Math.max(Math.round(requestedQuantity ?? pin.quantity), 1),
+    pin.quantity,
+  );
+
+  if (soldQuantity >= pin.quantity) {
+    // Selling the whole line: this row just becomes the sold record.
+    await prisma.pin.update({
+      where: { id },
+      data: { status: PinStatus.SOLD, soldPrice, soldDate, shippingCost },
+    });
+  } else {
+    // Selling part of a multi-quantity pin: split the sold portion into its
+    // own row (so the Sold page's per-row math keeps working unchanged) and
+    // shrink what's left of the original, proportioning cost/worth by unit.
+    const remainingQuantity = pin.quantity - soldQuantity;
+    const pricePaidPerUnit = pin.pricePaid !== null ? pin.pricePaid / pin.quantity : null;
+    const currentValuePerUnit = pin.currentValue !== null ? pin.currentValue / pin.quantity : null;
+
+    await prisma.$transaction([
+      prisma.pin.update({
+        where: { id },
+        data: {
+          quantity: remainingQuantity,
+          pricePaid: pricePaidPerUnit !== null ? pricePaidPerUnit * remainingQuantity : null,
+          currentValue:
+            currentValuePerUnit !== null ? currentValuePerUnit * remainingQuantity : null,
+        },
+      }),
+      prisma.pin.create({
+        data: {
+          name: pin.name,
+          series: pin.series,
+          imageUrl: pin.imageUrl,
+          acquisitionDate: pin.acquisitionDate,
+          acquisitionMethod: pin.acquisitionMethod,
+          quantity: soldQuantity,
+          pricePaid: pricePaidPerUnit !== null ? pricePaidPerUnit * soldQuantity : null,
+          currentValue: currentValuePerUnit !== null ? currentValuePerUnit * soldQuantity : null,
+          notes: pin.notes,
+          status: PinStatus.SOLD,
+          soldPrice,
+          soldDate,
+          shippingCost,
+        },
+      }),
+    ]);
+  }
 
   revalidatePath("/pins");
   revalidatePath("/sold");

@@ -95,10 +95,29 @@ export function PinForm({
         </div>
       </div>
 
+      <div>
+        <label className={labelClass} htmlFor="quantity">
+          Quantity
+        </label>
+        <input
+          id="quantity"
+          name="quantity"
+          type="number"
+          step="1"
+          min="1"
+          defaultValue={pin?.quantity ?? 1}
+          className={inputClass}
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          Have more than one of this exact pin? Track them as one entry — price paid and worth
+          below are the total for all of them.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass} htmlFor="pricePaid">
-            Price paid ($)
+            Price paid ($ total)
           </label>
           <input
             id="pricePaid"
@@ -112,7 +131,7 @@ export function PinForm({
         </div>
         <div>
           <label className={labelClass} htmlFor="currentValue">
-            Current estimated worth ($)
+            Current estimated worth ($ total)
           </label>
           <input
             id="currentValue"
