@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { put } from "@vercel/blob";
 import crypto from "crypto";
 
 const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
@@ -10,37 +10,21 @@ const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   "image/heif": "heif",
 };
 
-function r2Client() {
-  return new S3Client({
-    region: "auto",
-    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-    },
-  });
-}
-
-// Uploads a photo to Cloudflare R2 (S3-compatible) and returns its public URL.
+// Uploads a photo to Vercel Blob and returns its public URL.
 export async function saveUploadedImage(file: File, subdir: string): Promise<string | null> {
   if (!(file instanceof File) || file.size === 0) return null;
 
   const extension = EXTENSION_BY_MIME_TYPE[file.type];
   if (!extension) return null;
 
-  const key = `${subdir}/${crypto.randomUUID()}.${extension}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const pathname = `${subdir}/${crypto.randomUUID()}.${extension}`;
+  const blob = await put(pathname, file, {
+    access: "public",
+    addRandomSuffix: false,
+    contentType: file.type,
+  });
 
-  await r2Client().send(
-    new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: key,
-      Body: buffer,
-      ContentType: file.type,
-    }),
-  );
-
-  return `${process.env.R2_PUBLIC_URL}/${key}`;
+  return blob.url;
 }
 
 // Resolves the image to save for a form: an uploaded file (if any) wins over
