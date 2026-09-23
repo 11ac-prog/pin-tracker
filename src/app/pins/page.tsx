@@ -1,68 +1,53 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, gainLabel, gainToneClass } from "@/lib/format";
 import { deletePin } from "./actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { cardClass, primaryButtonClass } from "@/components/form";
-import { AcquisitionMethod, PinStatus, type Pin } from "@/generated/prisma/client";
+import { PinStatus, type Pin } from "@/generated/prisma/client";
+import { DeleteIcon, EditIcon, SellIcon, TradeIcon } from "@/components/icons";
+import { MethodBadge } from "@/components/pins/MethodBadge";
 
 export const dynamic = "force-dynamic";
 
-function gainToneClass(gain: number | null) {
-  if (gain === null) return "text-slate-600";
-  if (gain > 0) return "text-emerald-400";
-  if (gain < 0) return "text-rose-400";
-  return "text-slate-400";
-}
-
-function gainLabel(gain: number | null) {
-  return gain === null ? "—" : `${gain > 0 ? "+" : ""}${formatCurrency(gain)}`;
-}
-
-const methodBadgeClass: Record<AcquisitionMethod, string> = {
-  BOUGHT: "border-cyan-400/30 bg-cyan-400/10 text-cyan-300",
-  TRADED: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300",
-  GIFTED: "border-amber-400/30 bg-amber-400/10 text-amber-300",
-  OTHER: "border-slate-400/30 bg-slate-400/10 text-slate-300",
-};
-
-function MethodBadge({ method }: { method: AcquisitionMethod }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${methodBadgeClass[method]}`}
-    >
-      {method}
-    </span>
-  );
-}
-
-const actionLinkClass =
-  "rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition hover:border-white/20";
+const iconButtonClass =
+  "flex h-7 w-7 items-center justify-center rounded border border-white/10 bg-white/5 transition hover:border-white/20";
 
 function PinActions({ pin }: { pin: Pin }) {
   return (
     <div className="flex items-center gap-1.5">
       <Link
         href={`/trades/new?givenPinId=${pin.id}`}
-        className={`${actionLinkClass} text-cyan-300 hover:bg-cyan-400/10`}
+        title="Trade"
+        aria-label="Trade"
+        className={`${iconButtonClass} text-cyan-300 hover:bg-cyan-400/10`}
       >
-        Trade
+        <TradeIcon />
       </Link>
       <Link
         href={`/pins/${pin.id}/sell`}
-        className={`${actionLinkClass} text-emerald-300 hover:bg-emerald-400/10`}
+        title="Sell"
+        aria-label="Sell"
+        className={`${iconButtonClass} text-emerald-300 hover:bg-emerald-400/10`}
       >
-        Sell
+        <SellIcon />
       </Link>
       <Link
         href={`/pins/${pin.id}/edit`}
-        className={`${actionLinkClass} text-slate-300 hover:bg-white/10`}
+        title="Edit"
+        aria-label="Edit"
+        className={`${iconButtonClass} text-slate-300 hover:bg-white/10`}
       >
-        Edit
+        <EditIcon />
       </Link>
       <form action={deletePin}>
         <input type="hidden" name="id" value={pin.id} />
-        <DeleteButton confirmText={`Delete "${pin.name}" from your collection?`} className={actionLinkClass} />
+        <DeleteButton
+          confirmText={`Delete "${pin.name}" from your collection?`}
+          className={iconButtonClass}
+          ariaLabel="Delete"
+          label={<DeleteIcon />}
+        />
       </form>
     </div>
   );
@@ -70,7 +55,7 @@ function PinActions({ pin }: { pin: Pin }) {
 
 export default async function PinsPage(props: PageProps<"/pins">) {
   const searchParams = await props.searchParams;
-  const view = searchParams.view === "cards" ? "cards" : "list";
+  const view = searchParams.view === "list" ? "list" : "cards";
 
   const pins = await prisma.pin.findMany({
     where: { status: PinStatus.OWNED },
@@ -89,16 +74,6 @@ export default async function PinsPage(props: PageProps<"/pins">) {
         <div className="flex items-center gap-3">
           <div className="flex rounded-md border border-white/10 bg-white/5 p-0.5 text-xs">
             <Link
-              href="/pins?view=list"
-              className={`rounded px-3 py-1 font-bold uppercase tracking-wider ${
-                view === "list"
-                  ? "bg-gradient-to-r from-emerald-400 to-cyan-400 text-neutral-950"
-                  : "text-slate-400 hover:text-slate-100"
-              }`}
-            >
-              List
-            </Link>
-            <Link
               href="/pins?view=cards"
               className={`rounded px-3 py-1 font-bold uppercase tracking-wider ${
                 view === "cards"
@@ -107,6 +82,16 @@ export default async function PinsPage(props: PageProps<"/pins">) {
               }`}
             >
               Cards
+            </Link>
+            <Link
+              href="/pins?view=list"
+              className={`rounded px-3 py-1 font-bold uppercase tracking-wider ${
+                view === "list"
+                  ? "bg-gradient-to-r from-emerald-400 to-cyan-400 text-neutral-950"
+                  : "text-slate-400 hover:text-slate-100"
+              }`}
+            >
+              List
             </Link>
           </div>
           <Link href="/pins/new" className={primaryButtonClass}>
@@ -132,25 +117,29 @@ export default async function PinsPage(props: PageProps<"/pins">) {
                 : null;
             return (
               <div key={pin.id} className={`${cardClass} flex flex-col overflow-hidden`}>
-                {pin.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={pin.imageUrl}
-                    alt=""
-                    className="aspect-square w-full border-b border-white/10 object-cover"
-                  />
-                ) : (
-                  <div className="flex aspect-square w-full items-center justify-center border-b border-white/10 bg-black/20 text-5xl">
-                    📌
-                  </div>
-                )}
+                <Link href={`/pins/${pin.id}`}>
+                  {pin.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={pin.imageUrl}
+                      alt=""
+                      className="aspect-square w-full border-b border-white/10 object-cover"
+                    />
+                  ) : (
+                    <div className="flex aspect-square w-full items-center justify-center border-b border-white/10 bg-black/20 text-5xl">
+                      📌
+                    </div>
+                  )}
+                </Link>
                 <div className="flex flex-1 flex-col gap-3 p-4">
-                  <div>
-                    <div className="font-semibold text-slate-100">{pin.name}</div>
+                  <Link href={`/pins/${pin.id}`} className="group">
+                    <div className="font-semibold text-slate-100 group-hover:text-emerald-300">
+                      {pin.name}
+                    </div>
                     {pin.series ? (
                       <div className="text-xs text-slate-500">{pin.series}</div>
                     ) : null}
-                  </div>
+                  </Link>
 
                   <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
                     <dt className="text-slate-500">Acquired</dt>
@@ -201,7 +190,7 @@ export default async function PinsPage(props: PageProps<"/pins">) {
                   return (
                     <tr key={pin.id} className="transition hover:bg-white/[0.03]">
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
+                        <Link href={`/pins/${pin.id}`} className="group flex items-center gap-3">
                           {pin.imageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
@@ -215,12 +204,14 @@ export default async function PinsPage(props: PageProps<"/pins">) {
                             </div>
                           )}
                           <div>
-                            <div className="font-semibold text-slate-100">{pin.name}</div>
+                            <div className="font-semibold text-slate-100 group-hover:text-emerald-300">
+                              {pin.name}
+                            </div>
                             {pin.series ? (
                               <div className="text-xs text-slate-500">{pin.series}</div>
                             ) : null}
                           </div>
-                        </div>
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-slate-400">
                         {formatDate(pin.acquisitionDate)}

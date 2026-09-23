@@ -95,11 +95,17 @@ export async function createTrade(formData: FormData) {
   });
 
   for (const item of givenItems) {
+    const linkedPin = item.pinId ? linkedPinById.get(item.pinId) : undefined;
+
     await prisma.tradeItem.create({
       data: {
         tradeId: trade.id,
         direction: item.direction,
         description: item.description,
+        // Snapshot the photo now, since the pin row (and its image) gets
+        // deleted right after — this is what lets a pin's detail page show
+        // pictures of what was traded away for it, later.
+        imageUrl: linkedPin?.imageUrl ?? null,
         estimatedValue: item.estimatedValue,
         pinId: item.pinId,
       },

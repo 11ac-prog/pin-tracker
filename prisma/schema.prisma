@@ -74,6 +74,7 @@ model TradeItem {
   tradeId        String
   direction      TradeDirection
   description    String
+  imageUrl       String?
   estimatedValue Float?
   pin            Pin?           @relation(fields: [pinId], references: [id])
   pinId          String?

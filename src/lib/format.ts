@@ -15,3 +15,14 @@ export function formatDate(value: Date | string | null | undefined): string {
     day: "numeric",
   }).format(date);
 }
+
+export function gainToneClass(gain: number | null): string {
+  if (gain === null) return "text-slate-600";
+  if (gain > 0) return "text-emerald-400";
+  if (gain < 0) return "text-rose-400";
+  return "text-slate-400";
+}
+
+export function gainLabel(gain: number | null): string {
+  return gain === null ? "—" : `${gain > 0 ? "+" : ""}${formatCurrency(gain)}`;
+}
