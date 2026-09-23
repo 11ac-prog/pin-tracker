@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cardClass } from "@/components/form";
 import { prisma } from "@/lib/prisma";
 import { WishlistForm } from "@/components/wishlist/WishlistForm";
 import { updateWishlistItem } from "../../actions";
@@ -13,8 +14,8 @@ export default async function EditWishlistItemPage(props: PageProps<"/wishlist/[
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Edit wishlist item</h1>
-      <div className="rounded-lg border border-neutral-200 bg-white p-6">
+      <h1 className="text-2xl font-bold tracking-tight text-slate-100">Edit wishlist item</h1>
+      <div className={`${cardClass} p-6`}>
         <WishlistForm item={item} action={updateWishlistItem} />
       </div>
     </div>

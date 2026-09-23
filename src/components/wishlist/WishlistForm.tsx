@@ -45,7 +45,7 @@ export function WishlistForm({
         <input type="hidden" name="currentImageUrl" defaultValue={item?.imageUrl ?? ""} />
         <PhotoPicker initialImageUrl={item?.imageUrl} />
         <details className="mt-2" open={Boolean(item?.imageUrl && !item.imageUrl.startsWith("/uploads/"))}>
-          <summary className="cursor-pointer text-xs text-neutral-500">
+          <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-300">
             Or paste an image URL instead
           </summary>
           <input

@@ -55,13 +55,13 @@ export function SellForm({
           className={inputClass}
           placeholder="What you paid to ship it to the buyer"
         />
-        <p className="mt-1 text-xs text-neutral-500">
+        <p className="mt-1 text-xs text-slate-500">
           Counted as an expense against this sale&apos;s profit.
         </p>
       </div>
 
       {pin.pricePaid !== null ? (
-        <p className="text-sm text-neutral-500">Originally paid {"$" + pin.pricePaid.toFixed(2)} for this pin.</p>
+        <p className="text-sm text-slate-500">Originally paid {"$" + pin.pricePaid.toFixed(2)} for this pin.</p>
       ) : null}
 
       <div className="flex gap-3 pt-2">

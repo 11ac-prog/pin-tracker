@@ -51,7 +51,7 @@ export function PinForm({
         <input type="hidden" name="currentImageUrl" defaultValue={pin?.imageUrl ?? ""} />
         <PhotoPicker initialImageUrl={pin?.imageUrl} />
         <details className="mt-2" open={Boolean(pin?.imageUrl && !pin.imageUrl.startsWith("/uploads/"))}>
-          <summary className="cursor-pointer text-xs text-neutral-500">
+          <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-300">
             Or paste an image URL instead
           </summary>
           <input

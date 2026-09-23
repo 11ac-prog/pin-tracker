@@ -85,8 +85,8 @@ export function TradeForm({
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-700">You gave</h2>
-        <p className="text-xs text-neutral-500">
+        <h2 className="text-sm font-semibold text-slate-300">You gave</h2>
+        <p className="text-xs text-slate-500">
           Pick a pin from your collection and we&apos;ll use what you originally paid for it —
           no need to re-enter its value.
         </p>
@@ -97,7 +97,7 @@ export function TradeForm({
             return (
               <div
                 key={row.key}
-                className="grid grid-cols-1 gap-3 rounded-md border border-neutral-200 p-3 sm:grid-cols-[1fr_auto]"
+                className="grid grid-cols-1 gap-3 rounded-md border border-white/10 p-3 sm:grid-cols-[1fr_auto]"
               >
                 <input
                   type="hidden"
@@ -105,7 +105,7 @@ export function TradeForm({
                   value="GIVEN"
                 />
                 <div>
-                  {idx === 0 ? <label className="mb-1 block text-xs text-neutral-500">From your collection</label> : null}
+                  {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">From your collection</label> : null}
                   <select
                     name={`item-${items.indexOf(row)}-pinId`}
                     className={inputClass}
@@ -126,7 +126,7 @@ export function TradeForm({
                     ))}
                   </select>
                   {linkedPin ? (
-                    <p className="mt-1 text-xs text-neutral-500">
+                    <p className="mt-1 text-xs text-slate-500">
                       You paid {formatCurrency(linkedPin.pricePaid)}
                     </p>
                   ) : (
@@ -151,7 +151,7 @@ export function TradeForm({
                   <button
                     type="button"
                     onClick={() => removeItem(row.key)}
-                    className="text-sm font-medium text-red-600 hover:text-red-800"
+                    className="text-sm font-medium text-rose-400 hover:text-rose-300"
                   >
                     Remove
                   </button>
@@ -169,13 +169,13 @@ export function TradeForm({
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-700">You received</h2>
+        <h2 className="text-sm font-semibold text-slate-300">You received</h2>
         {items
           .filter((row) => row.direction === "RECEIVED")
           .map((row, idx) => (
             <div
               key={row.key}
-              className="grid grid-cols-1 gap-3 rounded-md border border-neutral-200 p-3 sm:grid-cols-[1fr_140px_auto_auto]"
+              className="grid grid-cols-1 gap-3 rounded-md border border-white/10 p-3 sm:grid-cols-[1fr_140px_auto_auto]"
             >
               <input
                 type="hidden"
@@ -183,7 +183,7 @@ export function TradeForm({
                 value="RECEIVED"
               />
               <div>
-                {idx === 0 ? <label className="mb-1 block text-xs text-neutral-500">Description</label> : null}
+                {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">Description</label> : null}
                 <input
                   name={`item-${items.indexOf(row)}-description`}
                   className={inputClass}
@@ -194,7 +194,7 @@ export function TradeForm({
                 />
               </div>
               <div>
-                {idx === 0 ? <label className="mb-1 block text-xs text-neutral-500">Value ($)</label> : null}
+                {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">Value ($)</label> : null}
                 <input
                   name={`item-${items.indexOf(row)}-estimatedValue`}
                   type="number"
@@ -205,7 +205,7 @@ export function TradeForm({
                   onChange={(e) => updateItem(row.key, { estimatedValue: e.target.value })}
                 />
               </div>
-              <label className="flex items-center gap-2 self-end pb-2 text-sm text-neutral-600">
+              <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-400">
                 <input
                   type="checkbox"
                   name={`item-${items.indexOf(row)}-addToCollection`}
@@ -218,7 +218,7 @@ export function TradeForm({
                 <button
                   type="button"
                   onClick={() => removeItem(row.key)}
-                  className="text-sm font-medium text-red-600 hover:text-red-800"
+                  className="text-sm font-medium text-rose-400 hover:text-rose-300"
                 >
                   Remove
                 </button>
@@ -247,7 +247,7 @@ export function TradeForm({
           className={inputClass}
           placeholder="What you paid to ship or receive items for this trade"
         />
-        <p className="mt-1 text-xs text-neutral-500">
+        <p className="mt-1 text-xs text-slate-500">
           Counted as an expense against this trade&apos;s net value.
         </p>
       </div>

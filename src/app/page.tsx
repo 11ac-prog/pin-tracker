@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PinStatus } from "@/generated/prisma/client";
+import { cardClass, statLabelClass } from "@/components/form";
 
 export const dynamic = "force-dynamic";
 
@@ -29,31 +30,29 @@ export default async function DashboardPage() {
     {
       label: "Unrealized gain / loss",
       value: `${unrealizedGain > 0 ? "+" : ""}${formatCurrency(unrealizedGain)}`,
-      tone: unrealizedGain > 0 ? "text-green-600" : unrealizedGain < 0 ? "text-red-600" : "text-neutral-900",
+      tone: unrealizedGain > 0 ? "text-emerald-400" : unrealizedGain < 0 ? "text-rose-400" : "text-slate-100",
     },
     {
       label: "Realized profit (sold)",
       value: `${realizedProfit > 0 ? "+" : ""}${formatCurrency(realizedProfit)}`,
-      tone: realizedProfit > 0 ? "text-green-600" : realizedProfit < 0 ? "text-red-600" : "text-neutral-900",
+      tone: realizedProfit > 0 ? "text-emerald-400" : realizedProfit < 0 ? "text-rose-400" : "text-slate-100",
     },
   ];
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-neutral-500">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-100">Dashboard</h1>
+        <p className="text-sm text-slate-500">
           A quick look at your pin collection&apos;s worth and activity.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat) => (
-          <div key={stat.label} className="rounded-lg border border-neutral-200 bg-white p-4">
-            <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-              {stat.label}
-            </div>
-            <div className={`mt-1 text-2xl font-semibold ${stat.tone ?? "text-neutral-900"}`}>
+          <div key={stat.label} className={`${cardClass} p-4`}>
+            <div className={statLabelClass}>{stat.label}</div>
+            <div className={`mt-1 text-2xl font-bold ${stat.tone ?? "text-slate-100"}`}>
               {stat.value}
             </div>
           </div>
@@ -61,53 +60,51 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Link href="/wishlist"
-          className="rounded-lg border border-neutral-200 bg-white p-4 hover:border-neutral-400"
+        <Link
+          href="/wishlist"
+          className={`${cardClass} p-4 transition hover:border-emerald-400/30 hover:bg-white/[0.05]`}
         >
-          <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-            Wishlist
-          </div>
-          <div className="mt-1 text-2xl font-semibold text-neutral-900">{wishlistCount}</div>
-          <div className="text-sm text-neutral-500">items you&apos;re hunting for</div>
+          <div className={statLabelClass}>Wishlist</div>
+          <div className="mt-1 text-2xl font-bold text-slate-100">{wishlistCount}</div>
+          <div className="text-sm text-slate-500">items you&apos;re hunting for</div>
         </Link>
-        <Link href="/trades"
-          className="rounded-lg border border-neutral-200 bg-white p-4 hover:border-neutral-400"
+        <Link
+          href="/trades"
+          className={`${cardClass} p-4 transition hover:border-cyan-400/30 hover:bg-white/[0.05]`}
         >
-          <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-            Trades
-          </div>
-          <div className="mt-1 text-2xl font-semibold text-neutral-900">{tradeCount}</div>
-          <div className="text-sm text-neutral-500">trades logged</div>
+          <div className={statLabelClass}>Trades</div>
+          <div className="mt-1 text-2xl font-bold text-slate-100">{tradeCount}</div>
+          <div className="text-sm text-slate-500">trades logged</div>
         </Link>
       </div>
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">Recently added</h2>
-          <Link href="/pins" className="text-sm font-medium text-neutral-600 hover:text-neutral-900">
+          <h2 className="text-lg font-bold tracking-tight text-slate-100">Recently added</h2>
+          <Link href="/pins" className="text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-emerald-300">
             View all
           </Link>
         </div>
         {recentPins.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-8 text-center text-neutral-500">
+          <div className={`${cardClass} border-dashed p-8 text-center text-slate-500`}>
             No pins yet.{" "}
-            <Link href="/pins/new" className="font-medium text-neutral-900 underline">
+            <Link href="/pins/new" className="font-semibold text-emerald-300 underline underline-offset-4">
               Add your first pin
             </Link>
             .
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-            <ul className="divide-y divide-neutral-100">
+          <div className={`${cardClass} overflow-hidden`}>
+            <ul className="divide-y divide-white/5">
               {recentPins.map((pin) => (
                 <li key={pin.id} className="flex items-center justify-between px-4 py-3">
                   <div>
-                    <div className="font-medium text-neutral-900">{pin.name}</div>
-                    <div className="text-xs text-neutral-500">
+                    <div className="font-semibold text-slate-100">{pin.name}</div>
+                    <div className="text-xs text-slate-500">
                       Added {formatDate(pin.createdAt)}
                     </div>
                   </div>
-                  <div className="text-sm text-neutral-600">
+                  <div className="text-sm text-slate-300">
                     {formatCurrency(pin.currentValue ?? pin.pricePaid)}
                   </div>
                 </li>

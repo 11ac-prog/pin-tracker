@@ -23,7 +23,7 @@ export function PhotoPicker({ initialImageUrl }: { initialImageUrl?: string | nu
 
   return (
     <div className="flex items-center gap-4">
-      <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-neutral-50">
+      <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-white/10 bg-black/20">
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={previewUrl} alt="" className="h-full w-full object-cover" />
@@ -48,13 +48,13 @@ export function PhotoPicker({ initialImageUrl }: { initialImageUrl?: string | nu
             <button
               type="button"
               onClick={clearSelection}
-              className="text-sm font-medium text-red-600 hover:text-red-800"
+              className="text-sm font-medium text-rose-400 hover:text-rose-300"
             >
               Remove
             </button>
           ) : null}
         </div>
-        {fileName ? <p className="text-xs text-neutral-500">{fileName}</p> : null}
+        {fileName ? <p className="text-xs text-slate-500">{fileName}</p> : null}
       </div>
     </div>
   );
