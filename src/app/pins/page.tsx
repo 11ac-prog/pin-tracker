@@ -179,73 +179,75 @@ export default async function PinsPage(props: PageProps<"/pins">) {
         </div>
       ) : (
         <div className={`${cardClass} overflow-hidden`}>
-          <table className="min-w-full divide-y divide-white/5 text-sm">
-            <thead className="bg-white/[0.03] text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Pin</th>
-                <th className="px-4 py-3">Acquired</th>
-                <th className="px-4 py-3">Method</th>
-                <th className="px-4 py-3 text-right">Paid</th>
-                <th className="px-4 py-3 text-right">Worth</th>
-                <th className="px-4 py-3 text-right">Gain / Loss</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {pins.map((pin) => {
-                const gain =
-                  pin.currentValue !== null && pin.pricePaid !== null
-                    ? pin.currentValue - pin.pricePaid
-                    : null;
-                return (
-                  <tr key={pin.id} className="transition hover:bg-white/[0.03]">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {pin.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={pin.imageUrl}
-                            alt=""
-                            className="h-10 w-10 rounded-md border border-white/10 object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-black/20 text-lg">
-                            📌
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-white/5 text-sm">
+              <thead className="bg-white/[0.03] text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">Pin</th>
+                  <th className="px-4 py-3">Acquired</th>
+                  <th className="px-4 py-3">Method</th>
+                  <th className="px-4 py-3 text-right">Paid</th>
+                  <th className="px-4 py-3 text-right">Worth</th>
+                  <th className="px-4 py-3 text-right">Gain / Loss</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {pins.map((pin) => {
+                  const gain =
+                    pin.currentValue !== null && pin.pricePaid !== null
+                      ? pin.currentValue - pin.pricePaid
+                      : null;
+                  return (
+                    <tr key={pin.id} className="transition hover:bg-white/[0.03]">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {pin.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={pin.imageUrl}
+                              alt=""
+                              className="h-10 w-10 rounded-md border border-white/10 object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-black/20 text-lg">
+                              📌
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-semibold text-slate-100">{pin.name}</div>
+                            {pin.series ? (
+                              <div className="text-xs text-slate-500">{pin.series}</div>
+                            ) : null}
                           </div>
-                        )}
-                        <div>
-                          <div className="font-semibold text-slate-100">{pin.name}</div>
-                          {pin.series ? (
-                            <div className="text-xs text-slate-500">{pin.series}</div>
-                          ) : null}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-400">
-                      {formatDate(pin.acquisitionDate)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <MethodBadge method={pin.acquisitionMethod} />
-                    </td>
-                    <td className="px-4 py-3 text-right text-slate-300">
-                      {formatCurrency(pin.pricePaid)}
-                    </td>
-                    <td className="px-4 py-3 text-right text-slate-300">
-                      {formatCurrency(pin.currentValue)}
-                    </td>
-                    <td className={`px-4 py-3 text-right font-bold ${gainToneClass(gain)}`}>
-                      {gainLabel(gain)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end">
-                        <PinActions pin={pin} />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">
+                        {formatDate(pin.acquisitionDate)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <MethodBadge method={pin.acquisitionMethod} />
+                      </td>
+                      <td className="px-4 py-3 text-right text-slate-300">
+                        {formatCurrency(pin.pricePaid)}
+                      </td>
+                      <td className="px-4 py-3 text-right text-slate-300">
+                        {formatCurrency(pin.currentValue)}
+                      </td>
+                      <td className={`px-4 py-3 text-right font-bold ${gainToneClass(gain)}`}>
+                        {gainLabel(gain)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end">
+                          <PinActions pin={pin} />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
