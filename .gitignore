@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -42,9 +43,6 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# sqlite database
+# leftover local sqlite file from before the Postgres migration
 /dev.db
 /dev.db-journal
-
-# user-uploaded photos (runtime data, not source — back this up alongside dev.db)
-/public/uploads

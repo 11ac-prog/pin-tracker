@@ -1,5 +1,4 @@
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 
 const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
@@ -11,22 +10,37 @@ const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   "image/heif": "heif",
 };
 
-// Saves an uploaded photo under public/uploads so it's servable as a plain
-// static file, and returns the URL to store on the record (e.g. Pin.imageUrl).
+function r2Client() {
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    },
+  });
+}
+
+// Uploads a photo to Cloudflare R2 (S3-compatible) and returns its public URL.
 export async function saveUploadedImage(file: File, subdir: string): Promise<string | null> {
   if (!(file instanceof File) || file.size === 0) return null;
 
   const extension = EXTENSION_BY_MIME_TYPE[file.type];
   if (!extension) return null;
 
-  const dir = path.join(process.cwd(), "public", "uploads", subdir);
-  await mkdir(dir, { recursive: true });
-
-  const filename = `${crypto.randomUUID()}.${extension}`;
+  const key = `${subdir}/${crypto.randomUUID()}.${extension}`;
   const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(dir, filename), buffer);
 
-  return `/uploads/${subdir}/${filename}`;
+  await r2Client().send(
+    new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type,
+    }),
+  );
+
+  return `${process.env.R2_PUBLIC_URL}/${key}`;
 }
 
 // Resolves the image to save for a form: an uploaded file (if any) wins over
