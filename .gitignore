@@ -46,3 +46,6 @@ next-env.d.ts
 # leftover local sqlite file from before the Postgres migration
 /dev.db
 /dev.db-journal
+
+.vercel
+.env*
