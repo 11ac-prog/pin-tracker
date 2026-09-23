@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   const totalWorth = ownedPins.reduce((sum, p) => sum + (p.currentValue ?? p.pricePaid ?? 0), 0);
   const unrealizedGain = totalWorth - totalPaid;
   const realizedProfit = soldPins.reduce(
-    (sum, p) => sum + ((p.soldPrice ?? 0) - (p.pricePaid ?? 0)),
+    (sum, p) => sum + ((p.soldPrice ?? 0) - (p.pricePaid ?? 0) - (p.shippingCost ?? 0)),
     0,
   );
   const recentPins = ownedPins.slice(0, 5);

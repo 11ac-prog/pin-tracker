@@ -15,7 +15,8 @@ export default async function SoldPage() {
 
   const totalPaid = soldPins.reduce((sum, p) => sum + (p.pricePaid ?? 0), 0);
   const totalSold = soldPins.reduce((sum, p) => sum + (p.soldPrice ?? 0), 0);
-  const totalProfit = totalSold - totalPaid;
+  const totalShipping = soldPins.reduce((sum, p) => sum + (p.shippingCost ?? 0), 0);
+  const totalProfit = totalSold - totalPaid - totalShipping;
 
   return (
     <div className="space-y-6">
@@ -41,7 +42,7 @@ export default async function SoldPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-lg border border-neutral-200 bg-white p-4">
               <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
                 Total paid
@@ -56,6 +57,14 @@ export default async function SoldPage() {
               </div>
               <div className="mt-1 text-2xl font-semibold text-neutral-900">
                 {formatCurrency(totalSold)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-neutral-200 bg-white p-4">
+              <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                Shipping costs
+              </div>
+              <div className="mt-1 text-2xl font-semibold text-neutral-900">
+                {formatCurrency(totalShipping)}
               </div>
             </div>
             <div className="rounded-lg border border-neutral-200 bg-white p-4">
@@ -85,6 +94,7 @@ export default async function SoldPage() {
                   <th className="px-4 py-3">Sold on</th>
                   <th className="px-4 py-3 text-right">Paid</th>
                   <th className="px-4 py-3 text-right">Sold for</th>
+                  <th className="px-4 py-3 text-right">Shipping</th>
                   <th className="px-4 py-3 text-right">Profit</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -92,7 +102,9 @@ export default async function SoldPage() {
               <tbody className="divide-y divide-neutral-100">
                 {soldPins.map((pin) => {
                   const profit =
-                    pin.soldPrice !== null ? pin.soldPrice - (pin.pricePaid ?? 0) : null;
+                    pin.soldPrice !== null
+                      ? pin.soldPrice - (pin.pricePaid ?? 0) - (pin.shippingCost ?? 0)
+                      : null;
                   return (
                     <tr key={pin.id}>
                       <td className="px-4 py-3">
@@ -123,6 +135,9 @@ export default async function SoldPage() {
                       </td>
                       <td className="px-4 py-3 text-right text-neutral-600">
                         {formatCurrency(pin.soldPrice)}
+                      </td>
+                      <td className="px-4 py-3 text-right text-neutral-600">
+                        {formatCurrency(pin.shippingCost)}
                       </td>
                       <td
                         className={`px-4 py-3 text-right font-medium ${

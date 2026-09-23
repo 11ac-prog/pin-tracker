@@ -24,6 +24,7 @@ export async function createTrade(formData: FormData) {
   const date = dateRaw ? new Date(dateRaw) : new Date();
   const partnerName = String(formData.get("partnerName") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const shippingCost = parseOptionalFloat(formData.get("shippingCost"));
   const itemCount = Number(formData.get("itemCount") ?? 0);
 
   const items: ParsedItem[] = [];
@@ -90,7 +91,7 @@ export async function createTrade(formData: FormData) {
   }
 
   const trade = await prisma.trade.create({
-    data: { date, partnerName, notes },
+    data: { date, partnerName, notes, shippingCost },
   });
 
   for (const item of givenItems) {

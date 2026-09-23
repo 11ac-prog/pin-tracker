@@ -67,10 +67,11 @@ export async function sellPin(formData: FormData) {
   const soldPrice = parseOptionalFloat(formData.get("soldPrice"));
   if (soldPrice === null) throw new Error("Sale price is required");
   const soldDate = parseOptionalDate(formData.get("soldDate")) ?? new Date();
+  const shippingCost = parseOptionalFloat(formData.get("shippingCost"));
 
   await prisma.pin.update({
     where: { id },
-    data: { status: PinStatus.SOLD, soldPrice, soldDate },
+    data: { status: PinStatus.SOLD, soldPrice, soldDate, shippingCost },
   });
 
   revalidatePath("/pins");
@@ -85,7 +86,7 @@ export async function restorePin(formData: FormData) {
 
   await prisma.pin.update({
     where: { id },
-    data: { status: PinStatus.OWNED, soldPrice: null, soldDate: null },
+    data: { status: PinStatus.OWNED, soldPrice: null, soldDate: null, shippingCost: null },
   });
 
   revalidatePath("/pins");

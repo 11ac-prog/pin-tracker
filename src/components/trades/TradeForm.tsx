@@ -235,6 +235,24 @@ export function TradeForm({
       </div>
 
       <div>
+        <label className={labelClass} htmlFor="shippingCost">
+          Shipping cost ($)
+        </label>
+        <input
+          id="shippingCost"
+          name="shippingCost"
+          type="number"
+          step="0.01"
+          min="0"
+          className={inputClass}
+          placeholder="What you paid to ship or receive items for this trade"
+        />
+        <p className="mt-1 text-xs text-neutral-500">
+          Counted as an expense against this trade&apos;s net value.
+        </p>
+      </div>
+
+      <div>
         <label className={labelClass} htmlFor="notes">
           Notes
         </label>

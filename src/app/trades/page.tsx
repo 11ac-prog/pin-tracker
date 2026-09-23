@@ -43,7 +43,7 @@ export default async function TradesPage() {
             const received = trade.items.filter((i) => i.direction === TradeDirection.RECEIVED);
             const givenValue = given.reduce((sum, i) => sum + (i.estimatedValue ?? 0), 0);
             const receivedValue = received.reduce((sum, i) => sum + (i.estimatedValue ?? 0), 0);
-            const net = receivedValue - givenValue;
+            const net = receivedValue - givenValue - (trade.shippingCost ?? 0);
 
             return (
               <div key={trade.id} className="rounded-lg border border-neutral-200 bg-white p-5">
@@ -92,13 +92,20 @@ export default async function TradesPage() {
                   </div>
                 </div>
 
-                <div
-                  className={`mt-4 text-sm font-medium ${
-                    net > 0 ? "text-green-600" : net < 0 ? "text-red-600" : "text-neutral-500"
-                  }`}
-                >
-                  Net value: {net > 0 ? "+" : ""}
-                  {formatCurrency(net)}
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  {trade.shippingCost ? (
+                    <div className="text-sm text-neutral-500">
+                      Shipping: {formatCurrency(trade.shippingCost)}
+                    </div>
+                  ) : null}
+                  <div
+                    className={`text-sm font-medium ${
+                      net > 0 ? "text-green-600" : net < 0 ? "text-red-600" : "text-neutral-500"
+                    }`}
+                  >
+                    Net value: {net > 0 ? "+" : ""}
+                    {formatCurrency(net)}
+                  </div>
                 </div>
               </div>
             );

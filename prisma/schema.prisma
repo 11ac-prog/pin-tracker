@@ -40,6 +40,7 @@ model Pin {
   status            PinStatus         @default(OWNED)
   soldPrice         Float?
   soldDate          DateTime?
+  shippingCost      Float?
   tradeItems        TradeItem[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -58,12 +59,13 @@ model WishlistItem {
 }
 
 model Trade {
-  id          String      @id @default(cuid())
-  date        DateTime    @default(now())
-  partnerName String?
-  notes       String?
-  items       TradeItem[]
-  createdAt   DateTime    @default(now())
+  id           String      @id @default(cuid())
+  date         DateTime    @default(now())
+  partnerName  String?
+  notes        String?
+  shippingCost Float?
+  items        TradeItem[]
+  createdAt    DateTime    @default(now())
 }
 
 model TradeItem {
