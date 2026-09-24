@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, lineTotal } from "@/lib/format";
 import { PinStatus } from "@/generated/prisma/client";
 import { cardClass, statLabelClass } from "@/components/form";
 
@@ -14,11 +14,15 @@ export default async function DashboardPage() {
     prisma.trade.count(),
   ]);
 
-  const totalPaid = ownedPins.reduce((sum, p) => sum + (p.pricePaid ?? 0), 0);
-  const totalWorth = ownedPins.reduce((sum, p) => sum + (p.currentValue ?? p.pricePaid ?? 0), 0);
+  const totalPaid = ownedPins.reduce((sum, p) => sum + (lineTotal(p.pricePaid, p.quantity) ?? 0), 0);
+  const totalWorth = ownedPins.reduce(
+    (sum, p) => sum + (lineTotal(p.currentValue, p.quantity) ?? lineTotal(p.pricePaid, p.quantity) ?? 0),
+    0,
+  );
   const unrealizedGain = totalWorth - totalPaid;
   const realizedProfit = soldPins.reduce(
-    (sum, p) => sum + ((p.soldPrice ?? 0) - (p.pricePaid ?? 0) - (p.shippingCost ?? 0)),
+    (sum, p) =>
+      sum + ((p.soldPrice ?? 0) - (lineTotal(p.pricePaid, p.quantity) ?? 0) - (p.shippingCost ?? 0)),
     0,
   );
   const recentPins = ownedPins.slice(0, 5);
@@ -99,13 +103,20 @@ export default async function DashboardPage() {
               {recentPins.map((pin) => (
                 <li key={pin.id} className="flex items-center justify-between px-4 py-3">
                   <div>
-                    <div className="font-semibold text-slate-100">{pin.name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-slate-100">{pin.name}</span>
+                      {pin.quantity > 1 ? (
+                        <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
+                          ×{pin.quantity}
+                        </span>
+                      ) : null}
+                    </div>
                     <div className="text-xs text-slate-500">
                       Added {formatDate(pin.createdAt)}
                     </div>
                   </div>
                   <div className="text-sm text-slate-300">
-                    {formatCurrency(pin.currentValue ?? pin.pricePaid)}
+                    {formatCurrency(lineTotal(pin.currentValue, pin.quantity) ?? lineTotal(pin.pricePaid, pin.quantity))}
                   </div>
                 </li>
               ))}

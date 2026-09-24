@@ -132,8 +132,10 @@ export function TradeForm({
                   </select>
                   {linkedPin ? (
                     <p className="mt-1 text-xs text-slate-500">
-                      You paid {formatCurrency(linkedPin.pricePaid)}
-                      {linkedPin.quantity > 1 ? ` total for all ${linkedPin.quantity}` : ""}
+                      You paid {formatCurrency(linkedPin.pricePaid)} each
+                      {linkedPin.quantity > 1 && linkedPin.pricePaid !== null
+                        ? ` (${formatCurrency(linkedPin.pricePaid * linkedPin.quantity)} total for all ${linkedPin.quantity})`
+                        : ""}
                     </p>
                   ) : (
                     <input
@@ -234,7 +236,7 @@ export function TradeForm({
               </div>
               <div>
                 {idx === 0 ? (
-                  <label className="mb-1 block text-xs text-slate-500">Value ($ total)</label>
+                  <label className="mb-1 block text-xs text-slate-500">Value ($ per pin)</label>
                 ) : null}
                 <input
                   name={`item-${items.indexOf(row)}-estimatedValue`}

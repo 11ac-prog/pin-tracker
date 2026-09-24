@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { formatCurrency, formatDate, gainLabel, gainToneClass } from "@/lib/format";
+import { formatCurrency, formatDate, gainLabel, gainToneClass, lineTotal } from "@/lib/format";
 import { deletePin } from "./actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { cardClass, primaryButtonClass } from "@/components/form";
@@ -111,10 +111,10 @@ export default async function PinsPage(props: PageProps<"/pins">) {
       ) : view === "cards" ? (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {pins.map((pin) => {
+            const totalPaid = lineTotal(pin.pricePaid, pin.quantity);
+            const totalWorth = lineTotal(pin.currentValue, pin.quantity);
             const gain =
-              pin.currentValue !== null && pin.pricePaid !== null
-                ? pin.currentValue - pin.pricePaid
-                : null;
+              totalWorth !== null && totalPaid !== null ? totalWorth - totalPaid : null;
             return (
               <div key={pin.id} className={`${cardClass} flex flex-col overflow-hidden`}>
                 <Link href={`/pins/${pin.id}`}>
@@ -156,9 +156,9 @@ export default async function PinsPage(props: PageProps<"/pins">) {
                       <MethodBadge method={pin.acquisitionMethod} />
                     </dd>
                     <dt className="text-slate-500">Paid</dt>
-                    <dd className="text-right text-slate-300">{formatCurrency(pin.pricePaid)}</dd>
+                    <dd className="text-right text-slate-300">{formatCurrency(totalPaid)}</dd>
                     <dt className="text-slate-500">Worth</dt>
-                    <dd className="text-right text-slate-300">{formatCurrency(pin.currentValue)}</dd>
+                    <dd className="text-right text-slate-300">{formatCurrency(totalWorth)}</dd>
                     <dt className="text-slate-500">Gain / Loss</dt>
                     <dd className={`text-right font-bold ${gainToneClass(gain)}`}>
                       {gainLabel(gain)}
@@ -190,10 +190,10 @@ export default async function PinsPage(props: PageProps<"/pins">) {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {pins.map((pin) => {
+                  const totalPaid = lineTotal(pin.pricePaid, pin.quantity);
+                  const totalWorth = lineTotal(pin.currentValue, pin.quantity);
                   const gain =
-                    pin.currentValue !== null && pin.pricePaid !== null
-                      ? pin.currentValue - pin.pricePaid
-                      : null;
+                    totalWorth !== null && totalPaid !== null ? totalWorth - totalPaid : null;
                   return (
                     <tr key={pin.id} className="transition hover:bg-white/[0.03]">
                       <td className="px-4 py-3">
@@ -234,10 +234,10 @@ export default async function PinsPage(props: PageProps<"/pins">) {
                         <MethodBadge method={pin.acquisitionMethod} />
                       </td>
                       <td className="px-4 py-3 text-right text-slate-300">
-                        {formatCurrency(pin.pricePaid)}
+                        {formatCurrency(totalPaid)}
                       </td>
                       <td className="px-4 py-3 text-right text-slate-300">
-                        {formatCurrency(pin.currentValue)}
+                        {formatCurrency(totalWorth)}
                       </td>
                       <td className={`px-4 py-3 text-right font-bold ${gainToneClass(gain)}`}>
                         {gainLabel(gain)}

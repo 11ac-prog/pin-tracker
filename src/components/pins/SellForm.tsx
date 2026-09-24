@@ -37,7 +37,7 @@ export function SellForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass} htmlFor="soldPrice">
-            Sale price ($)
+            Sale price ($ total)
           </label>
           <input
             id="soldPrice"
@@ -84,7 +84,9 @@ export function SellForm({
       {pin.pricePaid !== null ? (
         <p className="text-sm text-slate-500">
           Originally paid {"$" + pin.pricePaid.toFixed(2)}
-          {pin.quantity > 1 ? ` total for all ${pin.quantity}.` : " for this pin."}
+          {pin.quantity > 1
+            ? ` each ($${(pin.pricePaid * pin.quantity).toFixed(2)} total for all ${pin.quantity}).`
+            : " for this pin."}
         </p>
       ) : null}
 

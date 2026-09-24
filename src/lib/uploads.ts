@@ -18,7 +18,12 @@ export async function saveUploadedImage(file: File, subdir: string): Promise<str
   if (!extension) return null;
 
   const pathname = `${subdir}/${crypto.randomUUID()}.${extension}`;
-  const blob = await put(pathname, file, {
+  // Read the file fully into memory before handing it to Blob: passing the
+  // File itself as the body reuses its underlying stream, which Next's own
+  // multipart parsing has already touched, and blows up with "ReadableStream
+  // is locked" once deployed.
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const blob = await put(pathname, buffer, {
     access: "public",
     addRandomSuffix: false,
     contentType: file.type,

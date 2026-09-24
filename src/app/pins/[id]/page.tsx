@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatDate, gainLabel, gainToneClass } from "@/lib/format";
+import { formatCurrency, formatDate, gainLabel, gainToneClass, lineTotal } from "@/lib/format";
 import { cardClass, secondaryButtonClass } from "@/components/form";
 import { PinStatus, TradeDirection } from "@/generated/prisma/client";
 import { DeleteIcon, EditIcon, SellIcon, TradeIcon } from "@/components/icons";
@@ -26,11 +26,12 @@ export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
     (item) => item.direction === TradeDirection.GIVEN,
   );
 
-  const gain =
-    pin.currentValue !== null && pin.pricePaid !== null ? pin.currentValue - pin.pricePaid : null;
+  const totalPaid = lineTotal(pin.pricePaid, pin.quantity);
+  const totalWorth = lineTotal(pin.currentValue, pin.quantity);
+  const gain = totalWorth !== null && totalPaid !== null ? totalWorth - totalPaid : null;
   const profit =
     pin.status === PinStatus.SOLD && pin.soldPrice !== null
-      ? pin.soldPrice - (pin.pricePaid ?? 0) - (pin.shippingCost ?? 0)
+      ? pin.soldPrice - (totalPaid ?? 0) - (pin.shippingCost ?? 0)
       : null;
 
   return (
@@ -123,15 +124,29 @@ export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
                 <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Paid{pin.quantity > 1 ? " (total)" : ""}
                 </dt>
-                <dd className="mt-1 text-slate-200">{formatCurrency(pin.pricePaid)}</dd>
+                <dd className="mt-1 text-slate-200">
+                  {formatCurrency(totalPaid)}
+                  {pin.quantity > 1 && pin.pricePaid !== null ? (
+                    <span className="text-slate-500"> ({formatCurrency(pin.pricePaid)} each)</span>
+                  ) : null}
+                </dd>
               </div>
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   {pin.status === PinStatus.SOLD ? "Sold for" : "Current worth"}
-                  {pin.quantity > 1 ? " (total)" : ""}
+                  {pin.quantity > 1 && pin.status !== PinStatus.SOLD ? " (total)" : ""}
                 </dt>
                 <dd className="mt-1 text-slate-200">
-                  {formatCurrency(pin.status === PinStatus.SOLD ? pin.soldPrice : pin.currentValue)}
+                  {pin.status === PinStatus.SOLD ? (
+                    formatCurrency(pin.soldPrice)
+                  ) : (
+                    <>
+                      {formatCurrency(totalWorth)}
+                      {pin.quantity > 1 && pin.currentValue !== null ? (
+                        <span className="text-slate-500"> ({formatCurrency(pin.currentValue)} each)</span>
+                      ) : null}
+                    </>
+                  )}
                 </dd>
               </div>
               {pin.status === PinStatus.SOLD ? (

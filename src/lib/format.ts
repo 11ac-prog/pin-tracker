@@ -26,3 +26,9 @@ export function gainToneClass(gain: number | null): string {
 export function gainLabel(gain: number | null): string {
   return gain === null ? "—" : `${gain > 0 ? "+" : ""}${formatCurrency(gain)}`;
 }
+
+// pricePaid/currentValue are stored per pin; this is the total across a
+// line's quantity (e.g. $10 each × 3 = $30).
+export function lineTotal(perUnit: number | null, quantity: number): number | null {
+  return perUnit === null ? null : perUnit * quantity;
+}

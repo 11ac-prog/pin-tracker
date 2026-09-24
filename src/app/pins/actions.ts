@@ -94,20 +94,14 @@ export async function sellPin(formData: FormData) {
   } else {
     // Selling part of a multi-quantity pin: split the sold portion into its
     // own row (so the Sold page's per-row math keeps working unchanged) and
-    // shrink what's left of the original, proportioning cost/worth by unit.
+    // shrink what's left of the original. pricePaid/currentValue are per
+    // pin, so they carry over unchanged to both rows — only quantity splits.
     const remainingQuantity = pin.quantity - soldQuantity;
-    const pricePaidPerUnit = pin.pricePaid !== null ? pin.pricePaid / pin.quantity : null;
-    const currentValuePerUnit = pin.currentValue !== null ? pin.currentValue / pin.quantity : null;
 
     await prisma.$transaction([
       prisma.pin.update({
         where: { id },
-        data: {
-          quantity: remainingQuantity,
-          pricePaid: pricePaidPerUnit !== null ? pricePaidPerUnit * remainingQuantity : null,
-          currentValue:
-            currentValuePerUnit !== null ? currentValuePerUnit * remainingQuantity : null,
-        },
+        data: { quantity: remainingQuantity },
       }),
       prisma.pin.create({
         data: {
@@ -117,8 +111,8 @@ export async function sellPin(formData: FormData) {
           acquisitionDate: pin.acquisitionDate,
           acquisitionMethod: pin.acquisitionMethod,
           quantity: soldQuantity,
-          pricePaid: pricePaidPerUnit !== null ? pricePaidPerUnit * soldQuantity : null,
-          currentValue: currentValuePerUnit !== null ? currentValuePerUnit * soldQuantity : null,
+          pricePaid: pin.pricePaid,
+          currentValue: pin.currentValue,
           notes: pin.notes,
           status: PinStatus.SOLD,
           soldPrice,

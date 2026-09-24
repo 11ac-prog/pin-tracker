@@ -20,7 +20,9 @@ function parsePositiveInt(value: FormDataEntryValue | null, fallback: number): n
 type ParsedItem = {
   direction: TradeDirection;
   description: string;
-  estimatedValue: number | null;
+  // Per pin, not the total for the line — matches how Pin.pricePaid /
+  // Pin.currentValue are stored, so no conversion is needed going either way.
+  valuePerUnit: number | null;
   quantity: number;
   pinId: string | null;
   addToCollection: boolean;
@@ -43,10 +45,10 @@ export async function createTrade(formData: FormData) {
     items.push({
       direction,
       description,
-      // For a given item, the "value" is what you originally paid for it — filled in
-      // below from the linked pin, never asked for on the form. For a received item,
-      // it's the worth you entered for the incoming pin(s).
-      estimatedValue:
+      // For a given item, this is filled in below from the linked pin's own
+      // price paid — never asked for on the form. For a received item, it's
+      // the per-pin worth you entered for the incoming pin(s).
+      valuePerUnit:
         direction === TradeDirection.RECEIVED
           ? parseOptionalFloat(formData.get(`item-${i}-estimatedValue`))
           : null,
@@ -77,26 +79,27 @@ export async function createTrade(formData: FormData) {
     const linkedPin = item.pinId ? linkedPinById.get(item.pinId) : undefined;
     // Clamp to what's actually available, and price just the portion given away.
     item.quantity = linkedPin ? Math.min(item.quantity, linkedPin.quantity) : 1;
-    const pricePerUnit = linkedPin?.pricePaid != null ? linkedPin.pricePaid / linkedPin.quantity : null;
-    const cost = pricePerUnit !== null ? pricePerUnit * item.quantity : null;
-    item.estimatedValue = cost;
-    if (cost !== null) {
-      totalCostBasis += cost;
+    item.valuePerUnit = linkedPin?.pricePaid ?? null;
+    if (item.valuePerUnit !== null) {
+      totalCostBasis += item.valuePerUnit * item.quantity;
       hasCostBasis = true;
     }
   }
 
   const receivedToCollection = receivedItems.filter((item) => item.addToCollection);
   const totalReceivedValue = receivedToCollection.reduce(
-    (sum, item) => sum + (item.estimatedValue ?? 0),
+    (sum, item) => sum + (item.valuePerUnit ?? 0) * item.quantity,
     0,
   );
 
-  function costBasisFor(item: ParsedItem): number | null {
+  // Total cost basis (from what was given up) allocated to one received line,
+  // proportional to that line's own total worth among the received lines.
+  function costBasisTotalFor(item: ParsedItem): number | null {
     if (!hasCostBasis || receivedToCollection.length === 0) return null;
     if (receivedToCollection.length === 1) return totalCostBasis;
+    const lineValue = (item.valuePerUnit ?? 0) * item.quantity;
     if (totalReceivedValue > 0) {
-      return totalCostBasis * ((item.estimatedValue ?? 0) / totalReceivedValue);
+      return totalCostBasis * (lineValue / totalReceivedValue);
     }
     return totalCostBasis / receivedToCollection.length;
   }
@@ -107,6 +110,7 @@ export async function createTrade(formData: FormData) {
 
   for (const item of givenItems) {
     const linkedPin = item.pinId ? linkedPinById.get(item.pinId) : undefined;
+    const lineTotal = item.valuePerUnit !== null ? item.valuePerUnit * item.quantity : null;
 
     await prisma.tradeItem.create({
       data: {
@@ -117,7 +121,7 @@ export async function createTrade(formData: FormData) {
         // image) gets deleted right after — this is what lets a pin's detail
         // page show pictures of what was traded away for it, later.
         imageUrl: linkedPin?.imageUrl ?? null,
-        estimatedValue: item.estimatedValue,
+        estimatedValue: lineTotal,
         quantity: item.quantity,
         pinId: item.pinId,
       },
@@ -127,21 +131,12 @@ export async function createTrade(formData: FormData) {
       if (item.quantity >= linkedPin.quantity) {
         await prisma.pin.delete({ where: { id: linkedPin.id } }).catch(() => {});
       } else {
-        // Giving away part of a multi-quantity pin: shrink what's left,
-        // proportioning cost/worth by unit rather than deleting the row.
-        const remainingQuantity = linkedPin.quantity - item.quantity;
-        const pricePerUnit =
-          linkedPin.pricePaid !== null ? linkedPin.pricePaid / linkedPin.quantity : null;
-        const worthPerUnit =
-          linkedPin.currentValue !== null ? linkedPin.currentValue / linkedPin.quantity : null;
-
+        // Giving away part of a multi-quantity pin: shrink what's left.
+        // pricePaid/currentValue are per pin, so they're unaffected — only
+        // quantity splits.
         await prisma.pin.update({
           where: { id: linkedPin.id },
-          data: {
-            quantity: remainingQuantity,
-            pricePaid: pricePerUnit !== null ? pricePerUnit * remainingQuantity : null,
-            currentValue: worthPerUnit !== null ? worthPerUnit * remainingQuantity : null,
-          },
+          data: { quantity: linkedPin.quantity - item.quantity },
         });
       }
     }
@@ -149,16 +144,18 @@ export async function createTrade(formData: FormData) {
 
   for (const item of receivedItems) {
     let newPinId: string | null = null;
+    const lineTotal = item.valuePerUnit !== null ? item.valuePerUnit * item.quantity : null;
 
     if (item.addToCollection) {
+      const costBasisTotal = costBasisTotalFor(item);
       const newPin = await prisma.pin.create({
         data: {
           name: item.description,
           acquisitionDate: date,
           acquisitionMethod: AcquisitionMethod.TRADED,
           quantity: item.quantity,
-          pricePaid: costBasisFor(item),
-          currentValue: item.estimatedValue,
+          pricePaid: costBasisTotal !== null ? costBasisTotal / item.quantity : null,
+          currentValue: item.valuePerUnit,
           notes: partnerName ? `Traded with ${partnerName}` : null,
         },
       });
@@ -170,7 +167,7 @@ export async function createTrade(formData: FormData) {
         tradeId: trade.id,
         direction: item.direction,
         description: item.description,
-        estimatedValue: item.estimatedValue,
+        estimatedValue: lineTotal,
         quantity: item.quantity,
         pinId: newPinId,
       },

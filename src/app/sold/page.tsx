@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, lineTotal } from "@/lib/format";
 import { restorePin } from "../pins/actions";
 import { cardClass, secondaryButtonClass, statLabelClass } from "@/components/form";
 import { PinStatus } from "@/generated/prisma/client";
@@ -13,7 +13,7 @@ export default async function SoldPage() {
     orderBy: { soldDate: "desc" },
   });
 
-  const totalPaid = soldPins.reduce((sum, p) => sum + (p.pricePaid ?? 0), 0);
+  const totalPaid = soldPins.reduce((sum, p) => sum + (lineTotal(p.pricePaid, p.quantity) ?? 0), 0);
   const totalSold = soldPins.reduce((sum, p) => sum + (p.soldPrice ?? 0), 0);
   const totalShipping = soldPins.reduce((sum, p) => sum + (p.shippingCost ?? 0), 0);
   const totalProfit = totalSold - totalPaid - totalShipping;
@@ -94,9 +94,10 @@ export default async function SoldPage() {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {soldPins.map((pin) => {
+                    const linePaid = lineTotal(pin.pricePaid, pin.quantity);
                     const profit =
                       pin.soldPrice !== null
-                        ? pin.soldPrice - (pin.pricePaid ?? 0) - (pin.shippingCost ?? 0)
+                        ? pin.soldPrice - (linePaid ?? 0) - (pin.shippingCost ?? 0)
                         : null;
                     return (
                       <tr key={pin.id} className="transition hover:bg-white/[0.03]">
@@ -131,7 +132,7 @@ export default async function SoldPage() {
                         </td>
                         <td className="px-4 py-3 text-slate-400">{formatDate(pin.soldDate)}</td>
                         <td className="px-4 py-3 text-right text-slate-300">
-                          {formatCurrency(pin.pricePaid)}
+                          {formatCurrency(linePaid)}
                         </td>
                         <td className="px-4 py-3 text-right text-slate-300">
                           {formatCurrency(pin.soldPrice)}
