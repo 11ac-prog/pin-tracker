@@ -105,7 +105,7 @@ export function WishlistForm({
 
       <div className="flex gap-3 pt-2">
         <button type="submit" className={primaryButtonClass}>
-          {item ? "Save changes" : "Add to wishlist"}
+          {item ? "Save changes" : "Add to ISO"}
         </button>
         <Link href="/wishlist" className={secondaryButtonClass}>
           Cancel

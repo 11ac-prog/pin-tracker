@@ -68,7 +68,7 @@ export default async function DashboardPage() {
           href="/wishlist"
           className={`${cardClass} p-4 transition hover:border-emerald-400/30 hover:bg-white/[0.05]`}
         >
-          <div className={statLabelClass}>Wishlist</div>
+          <div className={statLabelClass}>ISO</div>
           <div className="mt-1 text-2xl font-bold text-slate-100">{wishlistCount}</div>
           <div className="text-sm text-slate-500">items you&apos;re hunting for</div>
         </Link>

@@ -18,7 +18,7 @@ const navLinks = [
   { href: "/pins", label: "Collection" },
   { href: "/trades", label: "Trades" },
   { href: "/sold", label: "Sold" },
-  { href: "/wishlist", label: "Wishlist" },
+  { href: "/wishlist", label: "ISO" },
 ];
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

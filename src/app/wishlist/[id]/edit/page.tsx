@@ -14,7 +14,7 @@ export default async function EditWishlistItemPage(props: PageProps<"/wishlist/[
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight text-slate-100">Edit wishlist item</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-100">Edit ISO item</h1>
       <div className={`${cardClass} p-6`}>
         <WishlistForm item={item} action={updateWishlistItem} />
       </div>

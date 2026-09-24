@@ -28,19 +28,19 @@ export default async function WishlistPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">Wishlist</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-100">ISO</h1>
           <p className="text-sm text-slate-500">
             {items.length} item{items.length === 1 ? "" : "s"} you&apos;re after
           </p>
         </div>
         <Link href="/wishlist/new" className={primaryButtonClass}>
-          + Add to wishlist
+          + Add to ISO
         </Link>
       </div>
 
       {items.length === 0 ? (
         <div className={`${cardClass} border-dashed p-10 text-center text-slate-500`}>
-          Nothing on your wishlist yet.{" "}
+          Nothing on your ISO list yet.{" "}
           <Link href="/wishlist/new" className="font-semibold text-emerald-300 underline underline-offset-4">
             Add something you&apos;re hunting for
           </Link>
@@ -95,7 +95,7 @@ export default async function WishlistPage() {
                   <form action={deleteWishlistItem}>
                     <input type="hidden" name="id" value={item.id} />
                     <DeleteButton
-                      confirmText={`Remove "${item.name}" from your wishlist?`}
+                      confirmText={`Remove "${item.name}" from your ISO list?`}
                       className="text-xs font-semibold uppercase tracking-wider"
                     />
                   </form>
