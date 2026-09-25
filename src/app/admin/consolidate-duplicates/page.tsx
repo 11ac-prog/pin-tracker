@@ -1,6 +1,6 @@
-import { backfillMissingPurchases, findDuplicateGroups, fixHalloweenCastleTestData, mergeDuplicateGroup } from "./actions";
+import { backfillMissingPurchases, findDuplicateGroups, mergeDuplicateGroup } from "./actions";
 import { ConsolidateRunner } from "./ConsolidateRunner";
-import { primaryButtonClass, secondaryButtonClass } from "@/components/form";
+import { secondaryButtonClass } from "@/components/form";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +29,6 @@ export default async function ConsolidateDuplicatesPage() {
         <form action={backfillMissingPurchases}>
           <button type="submit" className={secondaryButtonClass}>
             Backfill missing purchase history
-          </button>
-        </form>
-        <form action={fixHalloweenCastleTestData}>
-          <button type="submit" className={primaryButtonClass}>
-            Fix Halloween Castle test data
           </button>
         </form>
       </div>

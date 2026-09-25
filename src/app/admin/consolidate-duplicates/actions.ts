@@ -126,19 +126,3 @@ export async function backfillMissingPurchases(): Promise<void> {
   revalidatePath("/pins");
   revalidatePath("/");
 }
-
-// One-off: corrects "Halloween Castle" (cmuevdpai000804jy8l0mqj3v), which
-// picked up a test purchase via the + button before the rest of its history
-// had been backfilled, so its average briefly collapsed to just that one
-// purchase's price instead of blending with the original. Safe to remove
-// once run.
-export async function fixHalloweenCastleTestData() {
-  await backfillPurchase("cmuevdpai000804jy8l0mqj3v", {
-    quantity: 1,
-    pricePaid: 9.83,
-    acquisitionDate: new Date("2026-09-15"),
-    acquisitionMethod: "BOUGHT",
-  });
-  revalidatePath("/pins");
-  revalidatePath("/");
-}
