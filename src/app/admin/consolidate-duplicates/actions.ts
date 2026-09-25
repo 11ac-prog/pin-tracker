@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { PinStatus } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
+import { backfillPurchase } from "@/lib/purchases";
 
 function groupKey(name: string, series: string | null) {
   return `${name.trim().toLowerCase()}|${(series ?? "").trim().toLowerCase()}`;
@@ -100,6 +101,44 @@ export async function mergeDuplicateGroup(pinIds: string[]) {
     prisma.pin.deleteMany({ where: { id: { in: toDeleteIds } } }),
   ]);
 
+  revalidatePath("/pins");
+  revalidatePath("/");
+}
+
+// Pins created before the Purchase model existed have no purchase rows at
+// all, even though their quantity/price are real. Gives each of them exactly
+// one purchase mirroring their current state, so future "+" additions
+// average against real history instead of starting from nothing.
+export async function backfillMissingPurchases(): Promise<void> {
+  const pins = await prisma.pin.findMany({
+    where: { purchases: { none: {} } },
+  });
+
+  for (const pin of pins) {
+    await backfillPurchase(pin.id, {
+      quantity: pin.quantity,
+      pricePaid: pin.pricePaid,
+      acquisitionDate: pin.acquisitionDate,
+      acquisitionMethod: pin.acquisitionMethod,
+    });
+  }
+
+  revalidatePath("/pins");
+  revalidatePath("/");
+}
+
+// One-off: corrects "Halloween Castle" (cmuevdpai000804jy8l0mqj3v), which
+// picked up a test purchase via the + button before the rest of its history
+// had been backfilled, so its average briefly collapsed to just that one
+// purchase's price instead of blending with the original. Safe to remove
+// once run.
+export async function fixHalloweenCastleTestData() {
+  await backfillPurchase("cmuevdpai000804jy8l0mqj3v", {
+    quantity: 1,
+    pricePaid: 9.83,
+    acquisitionDate: new Date("2026-09-15"),
+    acquisitionMethod: "BOUGHT",
+  });
   revalidatePath("/pins");
   revalidatePath("/");
 }

@@ -46,6 +46,25 @@ export async function addPurchase(
   });
 }
 
+// Records a purchase for units that are already counted in Pin.quantity —
+// used to backfill purchase history for pins that predate the Purchase
+// model, where the existing quantity/price is real but was never logged as
+// its own row. Unlike addPurchase, this never touches Pin.quantity.
+export async function backfillPurchase(
+  pinId: string,
+  purchase: {
+    quantity: number;
+    pricePaid: number | null;
+    acquisitionDate: Date | null;
+    acquisitionMethod: Prisma.PurchaseCreateInput["acquisitionMethod"];
+  },
+) {
+  await prisma.$transaction(async (tx) => {
+    await tx.purchase.create({ data: { pinId, ...purchase, notes: null } });
+    await recomputePricePaid(tx, pinId);
+  });
+}
+
 export async function updatePurchase(
   purchaseId: string,
   purchase: {

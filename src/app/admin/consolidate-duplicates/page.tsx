@@ -1,5 +1,6 @@
-import { findDuplicateGroups, mergeDuplicateGroup } from "./actions";
+import { backfillMissingPurchases, findDuplicateGroups, fixHalloweenCastleTestData, mergeDuplicateGroup } from "./actions";
 import { ConsolidateRunner } from "./ConsolidateRunner";
+import { primaryButtonClass, secondaryButtonClass } from "@/components/form";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,25 @@ export default async function ConsolidateDuplicatesPage() {
           pin&apos;s detail page.
         </p>
       </div>
+
       <ConsolidateRunner initialGroups={groups} mergeAction={mergeDuplicateGroup} />
+
+      <div className="space-y-2 border-t border-white/10 pt-6">
+        <p className="text-xs text-slate-500">
+          One-time maintenance: backfills a purchase record for pins that predate the purchase
+          feature, so their history isn&apos;t empty. Run this once, after merging duplicates above.
+        </p>
+        <form action={backfillMissingPurchases}>
+          <button type="submit" className={secondaryButtonClass}>
+            Backfill missing purchase history
+          </button>
+        </form>
+        <form action={fixHalloweenCastleTestData}>
+          <button type="submit" className={primaryButtonClass}>
+            Fix Halloween Castle test data
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
