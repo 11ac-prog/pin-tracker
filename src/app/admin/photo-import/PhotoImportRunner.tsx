@@ -59,19 +59,32 @@ export function PhotoImportRunner({ initialPending }: { initialPending: Pending[
 
       let pinId: string | undefined = typeof e.pinId === "string" ? e.pinId : undefined;
       if (!pinId && typeof e.name === "string") {
-        const candidates = byName.get(e.name.trim().toLowerCase()) ?? [];
+        const key = e.name.trim().toLowerCase();
+        const candidates = byName.get(key) ?? [];
+        let chosenIndex = -1;
         if (candidates.length === 1) {
-          pinId = candidates[0].id;
+          chosenIndex = 0;
         } else if (candidates.length > 1 && typeof e.series === "string") {
-          const bySeries = candidates.filter(
-            (c) => c.series?.trim().toLowerCase() === (e.series as string).trim().toLowerCase(),
-          );
-          if (bySeries.length === 1) pinId = bySeries[0].id;
+          const seriesKey = (e.series as string).trim().toLowerCase();
+          const matchingIndexes = candidates
+            .map((c, i) => (c.series?.trim().toLowerCase() === seriesKey ? i : -1))
+            .filter((i) => i !== -1);
+          if (matchingIndexes.length === 1) chosenIndex = matchingIndexes[0];
+        } else if (candidates.length > 1) {
+          // No series given to disambiguate: assume these are true duplicates
+          // (same name, same series) and hand out one per repeated entry.
+          const allSameSeries = candidates.every((c) => c.series === candidates[0].series);
+          if (allSameSeries) chosenIndex = 0;
         }
-        if (!pinId && candidates.length > 1) {
-          skipped.push(`"${e.name}" matches ${candidates.length} pins — add a "series" field to disambiguate.`);
+        if (chosenIndex === -1) {
+          if (candidates.length > 1) {
+            skipped.push(`"${e.name}" matches ${candidates.length} pins — add a "series" field to disambiguate.`);
+          }
           continue;
         }
+        pinId = candidates[chosenIndex].id;
+        candidates.splice(chosenIndex, 1);
+        if (candidates.length === 0) byName.delete(key);
       }
       if (!pinId) continue;
       resolved.push({
