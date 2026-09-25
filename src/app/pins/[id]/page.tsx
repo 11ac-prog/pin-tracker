@@ -7,13 +7,17 @@ import { PinStatus, TradeDirection } from "@/generated/prisma/client";
 import { DeleteIcon, EditIcon, SellIcon, TradeIcon } from "@/components/icons";
 import { MethodBadge } from "@/components/pins/MethodBadge";
 import { DeleteButton } from "@/components/DeleteButton";
-import { deletePin } from "../actions";
+import { AddPurchaseButton, EditPurchaseButton } from "@/components/pins/PurchaseForm";
+import { addPurchaseAction, deletePin, deletePurchaseAction, updatePurchaseAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
   const { id } = await props.params;
-  const pin = await prisma.pin.findUnique({ where: { id } });
+  const pin = await prisma.pin.findUnique({
+    where: { id },
+    include: { purchases: { orderBy: { acquisitionDate: "asc" } } },
+  });
 
   if (!pin) notFound();
 
@@ -203,6 +207,57 @@ export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
           </div>
         </div>
 
+        <div className="space-y-6">
+        <div className={`${cardClass} p-5`}>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+              Purchases
+            </h2>
+            {pin.status === PinStatus.OWNED ? (
+              <AddPurchaseButton
+                pinId={pin.id}
+                lastPrice={pin.pricePaid}
+                lastMethod={pin.acquisitionMethod}
+                action={addPurchaseAction}
+              />
+            ) : null}
+          </div>
+
+          <ul className="mt-3 space-y-3">
+            {pin.purchases.map((purchase) => (
+              <li key={purchase.id} className="space-y-2 border-t border-white/5 pt-3 first:border-t-0 first:pt-0">
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <div>
+                    <span className="font-semibold text-slate-200">
+                      {formatCurrency(purchase.pricePaid)} each
+                    </span>
+                    {purchase.quantity > 1 ? (
+                      <span className="text-slate-500"> × {purchase.quantity}</span>
+                    ) : null}
+                    <div className="text-xs text-slate-500">
+                      {formatDate(purchase.acquisitionDate)}
+                      {" — "}
+                      <MethodBadge method={purchase.acquisitionMethod} />
+                    </div>
+                  </div>
+                  {pin.status === PinStatus.OWNED ? (
+                    <div className="flex items-center gap-3">
+                      <EditPurchaseButton purchase={purchase} action={updatePurchaseAction} />
+                      <form action={deletePurchaseAction}>
+                        <input type="hidden" name="purchaseId" value={purchase.id} />
+                        <DeleteButton
+                          confirmText="Remove this purchase? Its quantity and price will come out of this pin's total."
+                          className="text-xs font-semibold uppercase tracking-wider"
+                        />
+                      </form>
+                    </div>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         <div className={`${cardClass} p-5`}>
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
             Trade History
@@ -267,6 +322,7 @@ export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
               </Link>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

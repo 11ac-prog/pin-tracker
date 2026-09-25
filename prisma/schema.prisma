@@ -32,8 +32,16 @@ model Pin {
   name              String
   series            String?
   imageUrl          String?
+  // Date/method of the first purchase, kept here for card/detail display so
+  // most read paths don't need to touch Purchase at all.
   acquisitionDate   DateTime?
   acquisitionMethod AcquisitionMethod @default(BOUGHT)
+  // Cached aggregates, kept in sync by the purchase helpers whenever a
+  // Purchase is added/edited/deleted: quantity is total currently owned
+  // (purchases add to it, sells/trades subtract from it directly, same as
+  // before); pricePaid is the quantity-weighted average cost across every
+  // purchase ever recorded for this pin, regardless of how much has since
+  // been sold — that average is what sell/trade cost-basis math uses.
   quantity          Int               @default(1)
   pricePaid         Float?
   currentValue      Float?
@@ -42,9 +50,25 @@ model Pin {
   soldPrice         Float?
   soldDate          DateTime?
   shippingCost      Float?
+  purchases         Purchase[]
   tradeItems        TradeItem[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+}
+
+// One buying event for a Pin — lets the same pin design be "topped up" at a
+// different price later (the + button) instead of becoming a separate card,
+// while still keeping each purchase's own price/date on the pin's detail page.
+model Purchase {
+  id                String            @id @default(cuid())
+  pin               Pin               @relation(fields: [pinId], references: [id], onDelete: Cascade)
+  pinId             String
+  quantity          Int               @default(1)
+  pricePaid         Float?
+  acquisitionDate   DateTime?
+  acquisitionMethod AcquisitionMethod @default(BOUGHT)
+  notes             String?
+  createdAt         DateTime          @default(now())
 }
 
 model WishlistItem {

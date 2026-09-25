@@ -5,6 +5,7 @@ import { AcquisitionMethod, PinStatus } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { resolveImageUrl } from "@/lib/uploads";
+import { addPurchase, deletePurchase, updatePurchase } from "@/lib/purchases";
 
 function parseOptionalFloat(value: FormDataEntryValue | null): number | null {
   if (!value || value === "") return null;
@@ -24,6 +25,7 @@ function parsePositiveInt(value: FormDataEntryValue | null, fallback: number): n
   return Math.round(parsed);
 }
 
+// Fields every pin has regardless of its purchase history.
 async function readPinFields(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Name is required");
@@ -32,10 +34,6 @@ async function readPinFields(formData: FormData) {
     name,
     series: String(formData.get("series") ?? "").trim() || null,
     imageUrl: await resolveImageUrl(formData, "pins"),
-    acquisitionDate: parseOptionalDate(formData.get("acquisitionDate")),
-    acquisitionMethod: (formData.get("acquisitionMethod") as AcquisitionMethod) || AcquisitionMethod.BOUGHT,
-    quantity: parsePositiveInt(formData.get("quantity"), 1),
-    pricePaid: parseOptionalFloat(formData.get("pricePaid")),
     currentValue: parseOptionalFloat(formData.get("currentValue")),
     notes: String(formData.get("notes") ?? "").trim() || null,
   };
@@ -43,7 +41,17 @@ async function readPinFields(formData: FormData) {
 
 export async function createPin(formData: FormData) {
   const data = await readPinFields(formData);
-  await prisma.pin.create({ data });
+  const acquisitionDate = parseOptionalDate(formData.get("acquisitionDate"));
+  const acquisitionMethod =
+    (formData.get("acquisitionMethod") as AcquisitionMethod) || AcquisitionMethod.BOUGHT;
+  const quantity = parsePositiveInt(formData.get("quantity"), 1);
+  const pricePaid = parseOptionalFloat(formData.get("pricePaid"));
+
+  const pin = await prisma.pin.create({
+    data: { ...data, acquisitionDate, acquisitionMethod, quantity: 0, pricePaid: null },
+  });
+  await addPurchase(pin.id, { quantity, pricePaid, acquisitionDate, acquisitionMethod, notes: null });
+
   revalidatePath("/pins");
   revalidatePath("/");
   redirect("/pins");
@@ -57,6 +65,46 @@ export async function updatePin(formData: FormData) {
   revalidatePath("/pins");
   revalidatePath("/");
   redirect("/pins");
+}
+
+export async function addPurchaseAction(formData: FormData) {
+  const pinId = String(formData.get("pinId") ?? "");
+  if (!pinId) throw new Error("Missing pin id");
+
+  await addPurchase(pinId, {
+    quantity: parsePositiveInt(formData.get("quantity"), 1),
+    pricePaid: parseOptionalFloat(formData.get("pricePaid")),
+    acquisitionDate: parseOptionalDate(formData.get("acquisitionDate")) ?? new Date(),
+    acquisitionMethod: (formData.get("acquisitionMethod") as AcquisitionMethod) || AcquisitionMethod.BOUGHT,
+    notes: String(formData.get("notes") ?? "").trim() || null,
+  });
+
+  revalidatePath("/pins");
+  revalidatePath("/");
+}
+
+export async function updatePurchaseAction(formData: FormData) {
+  const purchaseId = String(formData.get("purchaseId") ?? "");
+  if (!purchaseId) throw new Error("Missing purchase id");
+
+  await updatePurchase(purchaseId, {
+    quantity: parsePositiveInt(formData.get("quantity"), 1),
+    pricePaid: parseOptionalFloat(formData.get("pricePaid")),
+    acquisitionDate: parseOptionalDate(formData.get("acquisitionDate")),
+    acquisitionMethod: (formData.get("acquisitionMethod") as AcquisitionMethod) || AcquisitionMethod.BOUGHT,
+    notes: String(formData.get("notes") ?? "").trim() || null,
+  });
+
+  revalidatePath("/pins");
+  revalidatePath("/");
+}
+
+export async function deletePurchaseAction(formData: FormData) {
+  const purchaseId = String(formData.get("purchaseId") ?? "");
+  if (!purchaseId) throw new Error("Missing purchase id");
+  await deletePurchase(purchaseId);
+  revalidatePath("/pins");
+  revalidatePath("/");
 }
 
 export async function deletePin(formData: FormData) {

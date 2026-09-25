@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { TradeDirection, AcquisitionMethod } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { addPurchase } from "@/lib/purchases";
 
 function parseOptionalFloat(value: FormDataEntryValue | null): number | null {
   if (!value || value === "") return null;
@@ -148,16 +149,24 @@ export async function createTrade(formData: FormData) {
 
     if (item.addToCollection) {
       const costBasisTotal = costBasisTotalFor(item);
+      const pricePaid = costBasisTotal !== null ? costBasisTotal / item.quantity : null;
       const newPin = await prisma.pin.create({
         data: {
           name: item.description,
           acquisitionDate: date,
           acquisitionMethod: AcquisitionMethod.TRADED,
-          quantity: item.quantity,
-          pricePaid: costBasisTotal !== null ? costBasisTotal / item.quantity : null,
+          quantity: 0,
+          pricePaid: null,
           currentValue: item.valuePerUnit,
           notes: partnerName ? `Traded with ${partnerName}` : null,
         },
+      });
+      await addPurchase(newPin.id, {
+        quantity: item.quantity,
+        pricePaid,
+        acquisitionDate: date,
+        acquisitionMethod: AcquisitionMethod.TRADED,
+        notes: partnerName ? `Traded with ${partnerName}` : null,
       });
       newPinId = newPin.id;
     }

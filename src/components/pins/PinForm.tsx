@@ -64,86 +64,96 @@ export function PinForm({
         </details>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className={labelClass} htmlFor="acquisitionDate">
-            Acquired on
-          </label>
-          <input
-            id="acquisitionDate"
-            name="acquisitionDate"
-            type="date"
-            defaultValue={toDateInputValue(pin?.acquisitionDate)}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass} htmlFor="acquisitionMethod">
-            How you got it
-          </label>
-          <select
-            id="acquisitionMethod"
-            name="acquisitionMethod"
-            defaultValue={pin?.acquisitionMethod ?? AcquisitionMethod.BOUGHT}
-            className={inputClass}
-          >
-            <option value={AcquisitionMethod.BOUGHT}>Bought</option>
-            <option value={AcquisitionMethod.TRADED}>Traded</option>
-            <option value={AcquisitionMethod.GIFTED}>Gifted</option>
-            <option value={AcquisitionMethod.OTHER}>Other</option>
-          </select>
-        </div>
-      </div>
+      {pin ? null : (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelClass} htmlFor="acquisitionDate">
+                Acquired on
+              </label>
+              <input
+                id="acquisitionDate"
+                name="acquisitionDate"
+                type="date"
+                defaultValue={toDateInputValue(null)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="acquisitionMethod">
+                How you got it
+              </label>
+              <select
+                id="acquisitionMethod"
+                name="acquisitionMethod"
+                defaultValue={AcquisitionMethod.BOUGHT}
+                className={inputClass}
+              >
+                <option value={AcquisitionMethod.BOUGHT}>Bought</option>
+                <option value={AcquisitionMethod.TRADED}>Traded</option>
+                <option value={AcquisitionMethod.GIFTED}>Gifted</option>
+                <option value={AcquisitionMethod.OTHER}>Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClass} htmlFor="quantity">
+              Quantity
+            </label>
+            <input
+              id="quantity"
+              name="quantity"
+              type="number"
+              step="1"
+              min="1"
+              defaultValue={1}
+              className={inputClass}
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Bought more than one at the same price? Set the quantity here. Buying more later at a
+              different price? Use the + button on the pin&apos;s card instead of a new entry.
+            </p>
+          </div>
+
+          <div>
+            <label className={labelClass} htmlFor="pricePaid">
+              Price paid ($ per pin)
+            </label>
+            <input
+              id="pricePaid"
+              name="pricePaid"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue=""
+              className={inputClass}
+            />
+          </div>
+        </>
+      )}
 
       <div>
-        <label className={labelClass} htmlFor="quantity">
-          Quantity
+        <label className={labelClass} htmlFor="currentValue">
+          Current estimated worth ($ per pin)
         </label>
         <input
-          id="quantity"
-          name="quantity"
+          id="currentValue"
+          name="currentValue"
           type="number"
-          step="1"
-          min="1"
-          defaultValue={pin?.quantity ?? 1}
+          step="0.01"
+          min="0"
+          defaultValue={pin?.currentValue ?? ""}
           className={inputClass}
         />
-        <p className="mt-1 text-xs text-slate-500">
-          Have more than one of this exact pin? Track them as one entry — price paid and worth
-          below are per pin, and we&apos;ll total them across the quantity automatically.
-        </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className={labelClass} htmlFor="pricePaid">
-            Price paid ($ per pin)
-          </label>
-          <input
-            id="pricePaid"
-            name="pricePaid"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={pin?.pricePaid ?? ""}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass} htmlFor="currentValue">
-            Current estimated worth ($ per pin)
-          </label>
-          <input
-            id="currentValue"
-            name="currentValue"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={pin?.currentValue ?? ""}
-            className={inputClass}
-          />
-        </div>
-      </div>
+      {pin ? (
+        <p className="text-xs text-slate-500">
+          Quantity and price paid are managed from the pin&apos;s detail page now, since they can
+          come from more than one purchase.
+        </p>
+      ) : null}
 
       <div>
         <label className={labelClass} htmlFor="notes">

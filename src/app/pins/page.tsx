@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { formatCurrency, formatDate, gainLabel, gainToneClass, lineTotal } from "@/lib/format";
-import { deletePin } from "./actions";
+import { addPurchaseAction, deletePin } from "./actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { cardClass, primaryButtonClass } from "@/components/form";
 import { PinStatus, type Pin } from "@/generated/prisma/client";
 import { DeleteIcon, EditIcon, SellIcon, TradeIcon } from "@/components/icons";
 import { MethodBadge } from "@/components/pins/MethodBadge";
+import { AddPurchaseButton } from "@/components/pins/PurchaseForm";
 
 export const dynamic = "force-dynamic";
 
@@ -132,21 +133,30 @@ export default async function PinsPage(props: PageProps<"/pins">) {
                   )}
                 </Link>
                 <div className="flex flex-1 flex-col gap-3 p-4">
-                  <Link href={`/pins/${pin.id}`} className="group">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-slate-100 group-hover:text-emerald-300">
-                        {pin.name}
-                      </span>
-                      {pin.quantity > 1 ? (
-                        <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
-                          ×{pin.quantity}
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <Link href={`/pins/${pin.id}`} className="group min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate font-semibold text-slate-100 group-hover:text-emerald-300">
+                          {pin.name}
                         </span>
+                        {pin.quantity > 1 ? (
+                          <span className="shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
+                            ×{pin.quantity}
+                          </span>
+                        ) : null}
+                      </div>
+                      {pin.series ? (
+                        <div className="text-xs text-slate-500">{pin.series}</div>
                       ) : null}
-                    </div>
-                    {pin.series ? (
-                      <div className="text-xs text-slate-500">{pin.series}</div>
-                    ) : null}
-                  </Link>
+                    </Link>
+                    <AddPurchaseButton
+                      pinId={pin.id}
+                      lastPrice={pin.pricePaid}
+                      lastMethod={pin.acquisitionMethod}
+                      action={addPurchaseAction}
+                      compact
+                    />
+                  </div>
 
                   <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
                     <dt className="text-slate-500">Acquired</dt>
