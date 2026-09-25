@@ -43,19 +43,36 @@ export function PhotoImportRunner({ initialPending }: { initialPending: Pending[
       return;
     }
 
-    const byName = new Map(pending.map((p) => [p.name.trim().toLowerCase(), p.id]));
+    const byName = new Map<string, Pending[]>();
+    for (const p of pending) {
+      const key = p.name.trim().toLowerCase();
+      byName.set(key, [...(byName.get(key) ?? []), p]);
+    }
+
     const resolved: { pinId: string; imageUrl: string; newName?: string; label?: string }[] = [];
+    const skipped: string[] = [];
     for (const entry of parsed) {
       if (typeof entry !== "object" || entry === null) continue;
       const e = entry as Record<string, unknown>;
       const imageUrl = typeof e.imageUrl === "string" ? e.imageUrl : null;
       if (!imageUrl) continue;
-      const pinId =
-        typeof e.pinId === "string"
-          ? e.pinId
-          : typeof e.name === "string"
-            ? byName.get(e.name.trim().toLowerCase())
-            : undefined;
+
+      let pinId: string | undefined = typeof e.pinId === "string" ? e.pinId : undefined;
+      if (!pinId && typeof e.name === "string") {
+        const candidates = byName.get(e.name.trim().toLowerCase()) ?? [];
+        if (candidates.length === 1) {
+          pinId = candidates[0].id;
+        } else if (candidates.length > 1 && typeof e.series === "string") {
+          const bySeries = candidates.filter(
+            (c) => c.series?.trim().toLowerCase() === (e.series as string).trim().toLowerCase(),
+          );
+          if (bySeries.length === 1) pinId = bySeries[0].id;
+        }
+        if (!pinId && candidates.length > 1) {
+          skipped.push(`"${e.name}" matches ${candidates.length} pins — add a "series" field to disambiguate.`);
+          continue;
+        }
+      }
       if (!pinId) continue;
       resolved.push({
         pinId,
@@ -66,8 +83,11 @@ export function PhotoImportRunner({ initialPending }: { initialPending: Pending[
     }
 
     if (resolved.length === 0) {
-      setParseError("Couldn't match any entries to a pin that's missing a photo.");
+      setParseError(skipped[0] ?? "Couldn't match any entries to a pin that's missing a photo.");
       return;
+    }
+    if (skipped.length > 0) {
+      setParseError(skipped.join(" "));
     }
     setPasted("");
     applyBatch(resolved);
@@ -93,7 +113,8 @@ export function PhotoImportRunner({ initialPending }: { initialPending: Pending[
 
       <div className={`${cardClass} space-y-3 p-4`}>
         <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Paste resolved matches (JSON array of {"{"}name or pinId, imageUrl, newName?{"}"})
+          Paste resolved matches (JSON array of {"{"}name or pinId, imageUrl, newName?, series?{"}"} —
+          series disambiguates when two pending pins share a name)
         </label>
         <textarea
           value={pasted}
