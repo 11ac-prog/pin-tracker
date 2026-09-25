@@ -21,7 +21,7 @@ export async function listPinsNeedingPhotos() {
   return pins;
 }
 
-export type ResolvedMatch = { pinId: string; imageUrl: string; label?: string };
+export type ResolvedMatch = { pinId: string; imageUrl: string; newName?: string; label?: string };
 
 export type ApplyOutcome =
   | { pinId: string; label?: string; status: "applied"; imageUrl: string }
@@ -30,13 +30,16 @@ export type ApplyOutcome =
 export async function applyResolvedMatches(resolved: ResolvedMatch[]): Promise<ApplyOutcome[]> {
   const outcomes: ApplyOutcome[] = [];
 
-  for (const { pinId, imageUrl, label } of resolved) {
+  for (const { pinId, imageUrl, newName, label } of resolved) {
     const blobUrl = await saveImageFromUrl(imageUrl, "pins");
     if (!blobUrl) {
       outcomes.push({ pinId, label, status: "failed" });
       continue;
     }
-    await prisma.pin.update({ where: { id: pinId }, data: { imageUrl: blobUrl } });
+    await prisma.pin.update({
+      where: { id: pinId },
+      data: { imageUrl: blobUrl, ...(newName ? { name: newName } : {}) },
+    });
     outcomes.push({ pinId, label, status: "applied", imageUrl: blobUrl });
   }
 

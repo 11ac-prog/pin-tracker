@@ -18,7 +18,7 @@ export function PhotoImportRunner({ initialPending }: { initialPending: Pending[
     setPending(await listPinsNeedingPhotos());
   }
 
-  async function applyBatch(resolved: { pinId: string; imageUrl: string; label?: string }[]) {
+  async function applyBatch(resolved: { pinId: string; imageUrl: string; newName?: string; label?: string }[]) {
     setApplying(true);
     try {
       const outcomes = await applyResolvedMatches(resolved);
@@ -44,7 +44,7 @@ export function PhotoImportRunner({ initialPending }: { initialPending: Pending[
     }
 
     const byName = new Map(pending.map((p) => [p.name.trim().toLowerCase(), p.id]));
-    const resolved: { pinId: string; imageUrl: string; label?: string }[] = [];
+    const resolved: { pinId: string; imageUrl: string; newName?: string; label?: string }[] = [];
     for (const entry of parsed) {
       if (typeof entry !== "object" || entry === null) continue;
       const e = entry as Record<string, unknown>;
@@ -57,7 +57,12 @@ export function PhotoImportRunner({ initialPending }: { initialPending: Pending[
             ? byName.get(e.name.trim().toLowerCase())
             : undefined;
       if (!pinId) continue;
-      resolved.push({ pinId, imageUrl, label: typeof e.label === "string" ? e.label : undefined });
+      resolved.push({
+        pinId,
+        imageUrl,
+        newName: typeof e.newName === "string" ? e.newName : undefined,
+        label: typeof e.label === "string" ? e.label : undefined,
+      });
     }
 
     if (resolved.length === 0) {
@@ -88,13 +93,13 @@ export function PhotoImportRunner({ initialPending }: { initialPending: Pending[
 
       <div className={`${cardClass} space-y-3 p-4`}>
         <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Paste resolved matches (JSON array of {"{"}name or pinId, imageUrl{"}"})
+          Paste resolved matches (JSON array of {"{"}name or pinId, imageUrl, newName?{"}"})
         </label>
         <textarea
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
           rows={6}
-          placeholder='[{"name": "The Kingdom Key Keyblade", "imageUrl": "https://..."}]'
+          placeholder='[{"name": "The Kingdom Key Keyblade", "imageUrl": "https://...", "newName": "Official Pin & Pop Name"}]'
           className={`${inputClass} font-mono text-xs`}
         />
         {parseError ? <p className="text-xs text-rose-400">{parseError}</p> : null}
