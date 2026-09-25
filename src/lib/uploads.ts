@@ -32,6 +32,26 @@ export async function saveUploadedImage(file: File, subdir: string): Promise<str
   return blob.url;
 }
 
+// Downloads an image from an external URL and re-hosts it on Vercel Blob,
+// so the app doesn't depend on a third-party site's CDN staying up.
+export async function saveImageFromUrl(sourceUrl: string, subdir: string): Promise<string | null> {
+  const res = await fetch(sourceUrl);
+  if (!res.ok) return null;
+
+  const contentType = res.headers.get("content-type")?.split(";")[0].trim() ?? "";
+  const extension = EXTENSION_BY_MIME_TYPE[contentType] ?? "jpg";
+
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const pathname = `${subdir}/${crypto.randomUUID()}.${extension}`;
+  const blob = await put(pathname, buffer, {
+    access: "public",
+    addRandomSuffix: false,
+    contentType: contentType || "image/jpeg",
+  });
+
+  return blob.url;
+}
+
 // Resolves the image to save for a form: an uploaded file (if any) wins over
 // a pasted URL, which wins over whatever was already there (carried through
 // the form as a hidden "currentImageUrl" field so editing without touching
