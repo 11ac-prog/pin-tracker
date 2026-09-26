@@ -21,11 +21,15 @@ function parsePositiveInt(value: FormDataEntryValue | null, fallback: number): n
 type ParsedItem = {
   direction: TradeDirection;
   description: string;
+  series: string | null;
   // Per pin, not the total for the line — matches how Pin.pricePaid /
   // Pin.currentValue are stored, so no conversion is needed going either way.
   valuePerUnit: number | null;
   quantity: number;
   pinId: string | null;
+  // A received item can be matched to a pin already in the collection —
+  // that pin gets a new purchase instead of a duplicate card.
+  matchPinId: string | null;
   addToCollection: boolean;
 };
 
@@ -46,6 +50,10 @@ export async function createTrade(formData: FormData) {
     items.push({
       direction,
       description,
+      series:
+        direction === TradeDirection.RECEIVED
+          ? String(formData.get(`item-${i}-series`) ?? "").trim() || null
+          : null,
       // For a given item, this is filled in below from the linked pin's own
       // price paid — never asked for on the form. For a received item, it's
       // the per-pin worth you entered for the incoming pin(s).
@@ -57,6 +65,10 @@ export async function createTrade(formData: FormData) {
       pinId:
         direction === TradeDirection.GIVEN
           ? String(formData.get(`item-${i}-pinId`) ?? "") || null
+          : null,
+      matchPinId:
+        direction === TradeDirection.RECEIVED
+          ? String(formData.get(`item-${i}-matchPinId`) ?? "") || null
           : null,
       addToCollection:
         direction === TradeDirection.RECEIVED &&
@@ -87,7 +99,7 @@ export async function createTrade(formData: FormData) {
     }
   }
 
-  const receivedToCollection = receivedItems.filter((item) => item.addToCollection);
+  const receivedToCollection = receivedItems.filter((item) => item.addToCollection || item.matchPinId);
   const totalReceivedValue = receivedToCollection.reduce(
     (sum, item) => sum + (item.valuePerUnit ?? 0) * item.quantity,
     0,
@@ -147,12 +159,32 @@ export async function createTrade(formData: FormData) {
     let newPinId: string | null = null;
     const lineTotal = item.valuePerUnit !== null ? item.valuePerUnit * item.quantity : null;
 
-    if (item.addToCollection) {
+    if (item.matchPinId) {
+      // Already in the collection: add a purchase to that pin instead of
+      // creating a duplicate card.
+      const costBasisTotal = costBasisTotalFor(item);
+      const pricePaid = costBasisTotal !== null ? costBasisTotal / item.quantity : null;
+      await addPurchase(item.matchPinId, {
+        quantity: item.quantity,
+        pricePaid,
+        acquisitionDate: date,
+        acquisitionMethod: AcquisitionMethod.TRADED,
+        notes: partnerName ? `Traded with ${partnerName}` : null,
+      });
+      if (item.valuePerUnit !== null) {
+        await prisma.pin.update({
+          where: { id: item.matchPinId },
+          data: { currentValue: item.valuePerUnit },
+        });
+      }
+      newPinId = item.matchPinId;
+    } else if (item.addToCollection) {
       const costBasisTotal = costBasisTotalFor(item);
       const pricePaid = costBasisTotal !== null ? costBasisTotal / item.quantity : null;
       const newPin = await prisma.pin.create({
         data: {
           name: item.description,
+          series: item.series,
           acquisitionDate: date,
           acquisitionMethod: AcquisitionMethod.TRADED,
           quantity: 0,

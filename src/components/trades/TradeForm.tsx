@@ -9,9 +9,11 @@ type TradeItemRow = {
   key: string;
   direction: "GIVEN" | "RECEIVED";
   description: string;
+  series: string;
   estimatedValue: string;
   quantity: string;
   pinId: string;
+  matchPinId: string;
   addToCollection: boolean;
 };
 
@@ -22,9 +24,11 @@ function newRow(direction: TradeItemRow["direction"]): TradeItemRow {
     key: `row-${keyCounter}`,
     direction,
     description: "",
+    series: "",
     estimatedValue: "",
     quantity: "1",
     pinId: "",
+    matchPinId: "",
     addToCollection: true,
   };
 }
@@ -201,73 +205,145 @@ export function TradeForm({
         <h2 className="text-sm font-semibold text-slate-300">You received</h2>
         {items
           .filter((row) => row.direction === "RECEIVED")
-          .map((row, idx) => (
-            <div
-              key={row.key}
-              className="grid grid-cols-1 gap-3 rounded-md border border-white/10 p-3 sm:grid-cols-[1fr_70px_120px_auto_auto]"
-            >
+          .map((row, idx) => {
+            const matchedPin = ownedPins.find((p) => p.id === row.matchPinId);
+            return (
+            <div key={row.key} className="space-y-3 rounded-md border border-white/10 p-3">
               <input
                 type="hidden"
                 name={`item-${items.indexOf(row)}-direction`}
                 value="RECEIVED"
               />
               <div>
-                {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">Description</label> : null}
-                <input
-                  name={`item-${items.indexOf(row)}-description`}
-                  className={inputClass}
-                  placeholder="What you received"
-                  value={row.description}
-                  onChange={(e) => updateItem(row.key, { description: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">Qty</label> : null}
-                <input
-                  name={`item-${items.indexOf(row)}-quantity`}
-                  type="number"
-                  step="1"
-                  min="1"
-                  className={inputClass}
-                  value={row.quantity}
-                  onChange={(e) => updateItem(row.key, { quantity: e.target.value })}
-                />
-              </div>
-              <div>
                 {idx === 0 ? (
-                  <label className="mb-1 block text-xs text-slate-500">Value ($ per pin)</label>
+                  <label className="mb-1 block text-xs text-slate-500">
+                    Already in your collection?
+                  </label>
                 ) : null}
-                <input
-                  name={`item-${items.indexOf(row)}-estimatedValue`}
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <select
                   className={inputClass}
-                  value={row.estimatedValue}
-                  onChange={(e) => updateItem(row.key, { estimatedValue: e.target.value })}
-                />
-              </div>
-              <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-400">
-                <input
-                  type="checkbox"
-                  name={`item-${items.indexOf(row)}-addToCollection`}
-                  checked={row.addToCollection}
-                  onChange={(e) => updateItem(row.key, { addToCollection: e.target.checked })}
-                />
-                Add to my collection
-              </label>
-              <div className="flex items-end justify-start sm:justify-center">
-                <button
-                  type="button"
-                  onClick={() => removeItem(row.key)}
-                  className="text-sm font-medium text-rose-400 hover:text-rose-300"
+                  value={row.matchPinId}
+                  onChange={(e) => {
+                    const pin = ownedPins.find((p) => p.id === e.target.value);
+                    updateItem(row.key, {
+                      matchPinId: e.target.value,
+                      description: pin ? pin.name : row.description,
+                    });
+                  }}
                 >
-                  Remove
-                </button>
+                  <option value="">No — this is a new pin</option>
+                  {ownedPins.map((pin) => (
+                    <option key={pin.id} value={pin.id}>
+                      {pin.name}
+                      {pin.quantity > 1 ? ` (×${pin.quantity})` : ""}
+                    </option>
+                  ))}
+                </select>
+                {matchedPin ? (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Adds a purchase to your existing &quot;{matchedPin.name}&quot; instead of a new card.
+                  </p>
+                ) : null}
               </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">Description</label> : null}
+                  {matchedPin ? (
+                    <input
+                      type="hidden"
+                      name={`item-${items.indexOf(row)}-description`}
+                      value={row.description}
+                    />
+                  ) : (
+                    <input
+                      name={`item-${items.indexOf(row)}-description`}
+                      className={inputClass}
+                      placeholder="What you received"
+                      value={row.description}
+                      onChange={(e) => updateItem(row.key, { description: e.target.value })}
+                      required
+                    />
+                  )}
+                  {matchedPin ? (
+                    <p className={inputClass}>{row.description}</p>
+                  ) : null}
+                </div>
+                {!matchedPin ? (
+                  <div>
+                    {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">Set / Series</label> : null}
+                    <input
+                      name={`item-${items.indexOf(row)}-series`}
+                      className={inputClass}
+                      placeholder="e.g. Hidden Mickey Series 12"
+                      value={row.series}
+                      onChange={(e) => updateItem(row.key, { series: e.target.value })}
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[70px_120px_auto_auto] sm:items-end">
+                <div>
+                  {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">Qty</label> : null}
+                  <input
+                    name={`item-${items.indexOf(row)}-quantity`}
+                    type="number"
+                    step="1"
+                    min="1"
+                    className={inputClass}
+                    value={row.quantity}
+                    onChange={(e) => updateItem(row.key, { quantity: e.target.value })}
+                  />
+                </div>
+                <div>
+                  {idx === 0 ? (
+                    <label className="mb-1 block text-xs text-slate-500">Value ($ per pin)</label>
+                  ) : null}
+                  <input
+                    name={`item-${items.indexOf(row)}-estimatedValue`}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className={inputClass}
+                    value={row.estimatedValue}
+                    onChange={(e) => updateItem(row.key, { estimatedValue: e.target.value })}
+                  />
+                </div>
+                {matchedPin ? (
+                  <input
+                    type="hidden"
+                    name={`item-${items.indexOf(row)}-addToCollection`}
+                    value="on"
+                  />
+                ) : (
+                  <label className="flex items-center gap-2 pb-2 text-sm text-slate-400">
+                    <input
+                      type="checkbox"
+                      name={`item-${items.indexOf(row)}-addToCollection`}
+                      checked={row.addToCollection}
+                      onChange={(e) => updateItem(row.key, { addToCollection: e.target.checked })}
+                    />
+                    Add to my collection
+                  </label>
+                )}
+                <div className="flex items-center justify-start pb-2 sm:justify-center">
+                  <button
+                    type="button"
+                    onClick={() => removeItem(row.key)}
+                    className="text-sm font-medium text-rose-400 hover:text-rose-300"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+
+              {row.matchPinId ? (
+                <input type="hidden" name={`item-${items.indexOf(row)}-matchPinId`} value={row.matchPinId} />
+              ) : null}
             </div>
-          ))}
+            );
+          })}
         <button
           type="button"
           onClick={() => setItems((prev) => [...prev, newRow("RECEIVED")])}
