@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { TradeDirection, AcquisitionMethod } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { addPurchase } from "@/lib/purchases";
+import { addPurchase, deletePurchase } from "@/lib/purchases";
 
 function parseOptionalFloat(value: FormDataEntryValue | null): number | null {
   if (!value || value === "") return null;
@@ -130,13 +130,19 @@ export async function createTrade(formData: FormData) {
         tradeId: trade.id,
         direction: item.direction,
         description: item.description,
-        // Snapshot the photo now, since a fully-given-away pin's row (and its
-        // image) gets deleted right after — this is what lets a pin's detail
-        // page show pictures of what was traded away for it, later.
+        // Snapshot the photo (and, below, a few other fields) now, since a
+        // fully-given-away pin's row gets deleted right after — this is what
+        // lets a pin's detail page show pictures of what was traded away for
+        // it, and lets deleting this trade later recreate the pin faithfully.
         imageUrl: linkedPin?.imageUrl ?? null,
         estimatedValue: lineTotal,
         quantity: item.quantity,
         pinId: item.pinId,
+        wasLinkedToPin: item.pinId !== null,
+        givenSeries: linkedPin?.series ?? null,
+        givenAcquisitionDate: linkedPin?.acquisitionDate ?? null,
+        givenAcquisitionMethod: linkedPin?.acquisitionMethod ?? null,
+        givenNotes: linkedPin?.notes ?? null,
       },
     });
 
@@ -159,28 +165,12 @@ export async function createTrade(formData: FormData) {
     let newPinId: string | null = null;
     const lineTotal = item.valuePerUnit !== null ? item.valuePerUnit * item.quantity : null;
 
+    // A new pin needs to exist before the trade item can point at it, and the
+    // trade item needs to exist before the purchase can link back to it —
+    // hence pin, then trade item, then purchase.
     if (item.matchPinId) {
-      // Already in the collection: add a purchase to that pin instead of
-      // creating a duplicate card.
-      const costBasisTotal = costBasisTotalFor(item);
-      const pricePaid = costBasisTotal !== null ? costBasisTotal / item.quantity : null;
-      await addPurchase(item.matchPinId, {
-        quantity: item.quantity,
-        pricePaid,
-        acquisitionDate: date,
-        acquisitionMethod: AcquisitionMethod.TRADED,
-        notes: partnerName ? `Traded with ${partnerName}` : null,
-      });
-      if (item.valuePerUnit !== null) {
-        await prisma.pin.update({
-          where: { id: item.matchPinId },
-          data: { currentValue: item.valuePerUnit },
-        });
-      }
       newPinId = item.matchPinId;
     } else if (item.addToCollection) {
-      const costBasisTotal = costBasisTotalFor(item);
-      const pricePaid = costBasisTotal !== null ? costBasisTotal / item.quantity : null;
       const newPin = await prisma.pin.create({
         data: {
           name: item.description,
@@ -193,17 +183,10 @@ export async function createTrade(formData: FormData) {
           notes: partnerName ? `Traded with ${partnerName}` : null,
         },
       });
-      await addPurchase(newPin.id, {
-        quantity: item.quantity,
-        pricePaid,
-        acquisitionDate: date,
-        acquisitionMethod: AcquisitionMethod.TRADED,
-        notes: partnerName ? `Traded with ${partnerName}` : null,
-      });
       newPinId = newPin.id;
     }
 
-    await prisma.tradeItem.create({
+    const tradeItem = await prisma.tradeItem.create({
       data: {
         tradeId: trade.id,
         direction: item.direction,
@@ -213,6 +196,25 @@ export async function createTrade(formData: FormData) {
         pinId: newPinId,
       },
     });
+
+    if (newPinId) {
+      const costBasisTotal = costBasisTotalFor(item);
+      const pricePaid = costBasisTotal !== null ? costBasisTotal / item.quantity : null;
+      await addPurchase(newPinId, {
+        quantity: item.quantity,
+        pricePaid,
+        acquisitionDate: date,
+        acquisitionMethod: AcquisitionMethod.TRADED,
+        notes: partnerName ? `Traded with ${partnerName}` : null,
+        tradeItemId: tradeItem.id,
+      });
+      if (item.matchPinId && item.valuePerUnit !== null) {
+        await prisma.pin.update({
+          where: { id: item.matchPinId },
+          data: { currentValue: item.valuePerUnit },
+        });
+      }
+    }
   }
 
   revalidatePath("/trades");
@@ -260,9 +262,66 @@ export async function updateTrade(formData: FormData) {
   redirect("/trades");
 }
 
+// Undoes what this trade did to the collection, then deletes it:
+// - A given item whose pin still exists (only partially given away) gets its
+//   quantity back.
+// - A given item whose pin was fully given away (and hard-deleted) is
+//   recreated from the snapshot taken at trade time — a new pin, since the
+//   original id is gone, but the same name/photo/series/price/quantity.
+// - A received item's purchase is removed (via the normal purchase-delete
+//   path, so quantity/average recompute correctly); if that leaves the pin
+//   with no purchases at all, the pin was created solely by this trade and
+//   is removed too.
 export async function deleteTrade(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing trade id");
+
+  const trade = await prisma.trade.findUnique({ where: { id }, include: { items: true } });
+  if (!trade) return;
+
+  for (const item of trade.items) {
+    if (item.direction === TradeDirection.GIVEN) {
+      if (item.pinId) {
+        await prisma.pin.update({
+          where: { id: item.pinId },
+          data: { quantity: { increment: item.quantity } },
+        });
+      } else if (item.wasLinkedToPin) {
+        const pricePaid = item.estimatedValue !== null ? item.estimatedValue / item.quantity : null;
+        const restoredPin = await prisma.pin.create({
+          data: {
+            name: item.description,
+            series: item.givenSeries,
+            imageUrl: item.imageUrl,
+            acquisitionDate: item.givenAcquisitionDate,
+            acquisitionMethod: item.givenAcquisitionMethod ?? AcquisitionMethod.BOUGHT,
+            notes: item.givenNotes,
+            quantity: 0,
+            pricePaid: null,
+          },
+        });
+        await addPurchase(restoredPin.id, {
+          quantity: item.quantity,
+          pricePaid,
+          acquisitionDate: item.givenAcquisitionDate,
+          acquisitionMethod: item.givenAcquisitionMethod ?? AcquisitionMethod.BOUGHT,
+          notes: "Restored after deleting a trade",
+        });
+      }
+    } else {
+      const purchase = await prisma.purchase.findUnique({ where: { tradeItemId: item.id } });
+      if (purchase) {
+        await deletePurchase(purchase.id);
+        const remaining = await prisma.purchase.count({ where: { pinId: purchase.pinId } });
+        if (remaining === 0) {
+          await prisma.pin.delete({ where: { id: purchase.pinId } }).catch(() => {});
+        }
+      }
+    }
+  }
+
   await prisma.trade.delete({ where: { id } });
   revalidatePath("/trades");
+  revalidatePath("/pins");
+  revalidatePath("/");
 }

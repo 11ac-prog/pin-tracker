@@ -64,7 +64,7 @@ export default async function TradesPage() {
                     </Link>
                     <form action={deleteTrade}>
                       <input type="hidden" name="id" value={trade.id} />
-                      <DeleteButton confirmText="Delete this trade record?" />
+                      <DeleteButton confirmText="Delete this trade and revert its effect on your collection (restore given pins, remove received ones)?" />
                     </form>
                   </div>
                 </div>

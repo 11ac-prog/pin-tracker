@@ -34,6 +34,9 @@ export async function addPurchase(
     acquisitionDate: Date | null;
     acquisitionMethod: Prisma.PurchaseCreateInput["acquisitionMethod"];
     notes: string | null;
+    // Links this purchase to the trade item that created it, so deleting
+    // that trade can find and undo exactly this purchase.
+    tradeItemId?: string;
   },
 ) {
   await prisma.$transaction(async (tx) => {

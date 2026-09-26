@@ -69,6 +69,11 @@ model Purchase {
   acquisitionMethod AcquisitionMethod @default(BOUGHT)
   notes             String?
   createdAt         DateTime          @default(now())
+  // Set when this purchase came from a trade's received item, so deleting
+  // that trade can find and undo exactly this purchase (and only this one,
+  // even if the pin has other purchases from elsewhere).
+  tradeItem         TradeItem?        @relation(fields: [tradeItemId], references: [id], onDelete: SetNull)
+  tradeItemId       String?           @unique
 }
 
 model WishlistItem {
@@ -104,4 +109,15 @@ model TradeItem {
   estimatedValue Float?
   pin            Pin?           @relation(fields: [pinId], references: [id])
   pinId          String?
+  purchase       Purchase?
+  // For a GIVEN item: whether it was linked to a pin at all (as opposed to
+  // "something not in your collection"), plus a snapshot of that pin's own
+  // fields at the time. If the pin was fully given away it gets hard-deleted
+  // right after (its FK here goes to null automatically) — this snapshot is
+  // what lets deleting the trade later recreate it faithfully.
+  wasLinkedToPin         Boolean            @default(false)
+  givenSeries            String?
+  givenAcquisitionDate   DateTime?
+  givenAcquisitionMethod AcquisitionMethod?
+  givenNotes             String?
 }
