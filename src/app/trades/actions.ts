@@ -189,6 +189,45 @@ export async function createTrade(formData: FormData) {
   redirect("/trades");
 }
 
+// Editing a trade only touches the trade record and its items' own fields
+// (description, value) — never which pins are linked or their quantities.
+// Those already drove one-time, hard-to-reverse changes when the trade was
+// created (a given pin was deleted or shrunk, a received pin was added), so
+// re-deriving them from an edited form would risk double-applying or losing
+// that history. Fixing a typo or a wrong value is safe; changing what was
+// actually traded means deleting this trade and logging it again.
+export async function updateTrade(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Missing trade id");
+
+  const dateRaw = String(formData.get("date") ?? "");
+  const date = dateRaw ? new Date(dateRaw) : new Date();
+  const partnerName = String(formData.get("partnerName") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const shippingCost = parseOptionalFloat(formData.get("shippingCost"));
+
+  const itemIds = String(formData.get("itemIds") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  await prisma.$transaction([
+    prisma.trade.update({ where: { id }, data: { date, partnerName, notes, shippingCost } }),
+    ...itemIds.map((itemId) =>
+      prisma.tradeItem.update({
+        where: { id: itemId },
+        data: {
+          description: String(formData.get(`item-${itemId}-description`) ?? "").trim(),
+          estimatedValue: parseOptionalFloat(formData.get(`item-${itemId}-estimatedValue`)),
+        },
+      }),
+    ),
+  ]);
+
+  revalidatePath("/trades");
+  redirect("/trades");
+}
+
 export async function deleteTrade(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing trade id");

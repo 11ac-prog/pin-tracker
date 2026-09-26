@@ -3,8 +3,9 @@ import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { deleteTrade } from "./actions";
 import { DeleteButton } from "@/components/DeleteButton";
-import { cardClass, primaryButtonClass } from "@/components/form";
+import { cardClass, primaryButtonClass, secondaryButtonClass } from "@/components/form";
 import { TradeDirection } from "@/generated/prisma/client";
+import { EditIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -57,10 +58,15 @@ export default async function TradesPage() {
                       <p className="mt-1 text-sm text-slate-500">{trade.notes}</p>
                     ) : null}
                   </div>
-                  <form action={deleteTrade}>
-                    <input type="hidden" name="id" value={trade.id} />
-                    <DeleteButton confirmText="Delete this trade record?" />
-                  </form>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/trades/${trade.id}/edit`} className={secondaryButtonClass}>
+                      <EditIcon className="h-4 w-4" /> Edit
+                    </Link>
+                    <form action={deleteTrade}>
+                      <input type="hidden" name="id" value={trade.id} />
+                      <DeleteButton confirmText="Delete this trade record?" />
+                    </form>
+                  </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
