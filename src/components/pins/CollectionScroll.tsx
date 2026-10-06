@@ -13,6 +13,12 @@ const MAX_AGE_MS = 10 * 60 * 1000;
 // of window.location avoids racing with Next updating the address bar.
 export function CollectionScroll({ url }: { url: string }) {
   useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let userScrolled = false;
+    const stopRestoring = () => {
+      userScrolled = true;
+    };
+
     try {
       sessionStorage.setItem(LAST_URL_KEY, url);
       const raw = sessionStorage.getItem(SCROLL_KEY);
@@ -20,7 +26,22 @@ export function CollectionScroll({ url }: { url: string }) {
         sessionStorage.removeItem(SCROLL_KEY);
         const saved = JSON.parse(raw) as { y: number; url: string; at: number };
         if (saved.url === url && Date.now() - saved.at < MAX_AGE_MS) {
-          requestAnimationFrame(() => window.scrollTo(0, saved.y));
+          // Next.js applies its own scroll-to-top for a navigation at a
+          // slightly unpredictable moment, so retry briefly rather than
+          // relying on a single call — but give up as soon as the user
+          // scrolls so we never fight them.
+          for (const event of ["wheel", "touchstart", "keydown"] as const) {
+            window.addEventListener(event, stopRestoring, { once: true, passive: true });
+          }
+          for (const delay of [0, 50, 150, 300, 600, 1000]) {
+            timers.push(
+              setTimeout(() => {
+                if (!userScrolled && Math.abs(window.scrollY - saved.y) > 2) {
+                  window.scrollTo(0, saved.y);
+                }
+              }, delay),
+            );
+          }
         }
       }
     } catch {
@@ -46,7 +67,13 @@ export function CollectionScroll({ url }: { url: string }) {
     }
 
     document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
+    return () => {
+      document.removeEventListener("click", onClick);
+      for (const event of ["wheel", "touchstart", "keydown"] as const) {
+        window.removeEventListener(event, stopRestoring);
+      }
+      timers.forEach(clearTimeout);
+    };
   }, [url]);
 
   return null;
