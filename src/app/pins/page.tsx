@@ -8,6 +8,8 @@ import { PinStatus, type Pin } from "@/generated/prisma/client";
 import { DeleteIcon, EditIcon, SellIcon, TradeIcon } from "@/components/icons";
 import { MethodBadge } from "@/components/pins/MethodBadge";
 import { AddPurchaseButton } from "@/components/pins/PurchaseForm";
+import { CollectionScroll } from "@/components/pins/CollectionScroll";
+import { CollectionSearch } from "@/components/pins/CollectionSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -57,25 +59,48 @@ function PinActions({ pin }: { pin: Pin }) {
 export default async function PinsPage(props: PageProps<"/pins">) {
   const searchParams = await props.searchParams;
   const view = searchParams.view === "list" ? "list" : "cards";
+  const q = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
 
-  const pins = await prisma.pin.findMany({
-    where: { status: PinStatus.OWNED },
-    orderBy: { createdAt: "desc" },
-  });
+  const [pins, totalOwned] = await Promise.all([
+    prisma.pin.findMany({
+      where: {
+        status: PinStatus.OWNED,
+        ...(q
+          ? {
+              OR: [
+                { name: { contains: q, mode: "insensitive" } },
+                { series: { contains: q, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.pin.count({ where: { status: PinStatus.OWNED } }),
+  ]);
+
+  const viewHref = (v: "cards" | "list") => {
+    const params = new URLSearchParams({ view: v });
+    if (q) params.set("q", q);
+    return `/pins?${params.toString()}`;
+  };
 
   return (
     <div className="space-y-6">
+      <CollectionScroll />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-100">Collection</h1>
           <p className="text-sm text-slate-500">
-            {pins.length} pin{pins.length === 1 ? "" : "s"} tracked
+            {q
+              ? `${pins.length} of ${totalOwned} pins match "${q}"`
+              : `${pins.length} pin${pins.length === 1 ? "" : "s"} tracked`}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex rounded-md border border-white/10 bg-white/5 p-0.5 text-xs">
             <Link
-              href="/pins?view=cards"
+              href={viewHref("cards")}
               className={`rounded px-3 py-1 font-bold uppercase tracking-wider ${
                 view === "cards"
                   ? "bg-gradient-to-r from-emerald-400 to-cyan-400 text-neutral-950"
@@ -85,7 +110,7 @@ export default async function PinsPage(props: PageProps<"/pins">) {
               Cards
             </Link>
             <Link
-              href="/pins?view=list"
+              href={viewHref("list")}
               className={`rounded px-3 py-1 font-bold uppercase tracking-wider ${
                 view === "list"
                   ? "bg-gradient-to-r from-emerald-400 to-cyan-400 text-neutral-950"
@@ -101,7 +126,13 @@ export default async function PinsPage(props: PageProps<"/pins">) {
         </div>
       </div>
 
-      {pins.length === 0 ? (
+      <CollectionSearch initialQuery={q} view={view} />
+
+      {pins.length === 0 && q ? (
+        <div className={`${cardClass} border-dashed p-10 text-center text-slate-500`}>
+          No pins match &quot;{q}&quot;.
+        </div>
+      ) : pins.length === 0 ? (
         <div className={`${cardClass} border-dashed p-10 text-center text-slate-500`}>
           No pins yet.{" "}
           <Link href="/pins/new" className="font-semibold text-emerald-300 underline underline-offset-4">

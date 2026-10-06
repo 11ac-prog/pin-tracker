@@ -8,6 +8,7 @@ import { DeleteIcon, EditIcon, SellIcon, TradeIcon } from "@/components/icons";
 import { MethodBadge } from "@/components/pins/MethodBadge";
 import { DeleteButton } from "@/components/DeleteButton";
 import { AddPurchaseButton, EditPurchaseButton } from "@/components/pins/PurchaseForm";
+import { BackToCollection } from "@/components/pins/BackToCollection";
 import { addPurchaseAction, deletePin, deletePurchaseAction, updatePurchaseAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -41,9 +42,7 @@ export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/pins" className={secondaryButtonClass}>
-          ← Back to collection
-        </Link>
+        <BackToCollection className={secondaryButtonClass} />
         {pin.status === PinStatus.OWNED ? (
           <div className="flex items-center gap-2">
             <Link
