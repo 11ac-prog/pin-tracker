@@ -126,16 +126,3 @@ export async function backfillMissingPurchases(): Promise<void> {
   revalidatePath("/pins");
   revalidatePath("/");
 }
-
-// One-off: Evil Emperor Zurg's trade was deleted before deleting a trade
-// reverted its effects, so the unit it gave away never came back (4
-// purchased, 3 owned). Only applies while quantity is still 3. Safe to
-// remove once run.
-export async function restoreZurgUnit() {
-  await prisma.pin.updateMany({
-    where: { id: "cmueqomq8000004l6p5ohyp4k", quantity: 3 },
-    data: { quantity: 4 },
-  });
-  revalidatePath("/pins");
-  revalidatePath("/");
-}
