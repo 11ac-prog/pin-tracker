@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from "@/components/form";
 import { formatCurrency } from "@/lib/format";
+import { SeriesDatalist } from "@/components/SeriesDatalist";
 
 type TradeItemRow = {
   key: string;
@@ -37,10 +38,12 @@ export function TradeForm({
   action,
   ownedPins,
   initialGivenPinId,
+  seriesOptions = [],
 }: {
   action: (formData: FormData) => void;
   ownedPins: { id: string; name: string; pricePaid: number | null; quantity: number }[];
   initialGivenPinId?: string;
+  seriesOptions?: string[];
 }) {
   const [items, setItems] = useState<TradeItemRow[]>(() => {
     const givenRow = newRow("GIVEN");
@@ -64,6 +67,7 @@ export function TradeForm({
   return (
     <form action={action} className="space-y-6">
       <input type="hidden" name="itemCount" value={items.length} />
+      <SeriesDatalist id="series-options" options={seriesOptions} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
@@ -274,8 +278,10 @@ export function TradeForm({
                     {idx === 0 ? <label className="mb-1 block text-xs text-slate-500">Set / Series</label> : null}
                     <input
                       name={`item-${items.indexOf(row)}-series`}
+                      list="series-options"
+                      autoComplete="off"
                       className={inputClass}
-                      placeholder="e.g. Hidden Mickey Series 12"
+                      placeholder="Pick an existing series or type a new one"
                       value={row.series}
                       onChange={(e) => updateItem(row.key, { series: e.target.value })}
                     />

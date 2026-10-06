@@ -2,13 +2,16 @@ import type { WishlistItem } from "@/generated/prisma/client";
 import Link from "next/link";
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from "@/components/form";
 import { PhotoPicker } from "@/components/PhotoPicker";
+import { SeriesDatalist } from "@/components/SeriesDatalist";
 
 export function WishlistForm({
   item,
   action,
+  seriesOptions = [],
 }: {
   item?: WishlistItem;
   action: (formData: FormData) => void;
+  seriesOptions?: string[];
 }) {
   return (
     <form action={action} className="space-y-4" encType="multipart/form-data">
@@ -35,9 +38,13 @@ export function WishlistForm({
         <input
           id="series"
           name="series"
+          list="series-options"
+          autoComplete="off"
           defaultValue={item?.series ?? ""}
           className={inputClass}
+          placeholder="Pick an existing series or type a new one"
         />
+        <SeriesDatalist id="series-options" options={seriesOptions} />
       </div>
 
       <div>

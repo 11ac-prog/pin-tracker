@@ -2,6 +2,7 @@ import { AcquisitionMethod, type Pin } from "@/generated/prisma/client";
 import Link from "next/link";
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from "@/components/form";
 import { PhotoPicker } from "@/components/PhotoPicker";
+import { SeriesDatalist } from "@/components/SeriesDatalist";
 
 function toDateInputValue(date: Date | null | undefined) {
   if (!date) return "";
@@ -11,9 +12,11 @@ function toDateInputValue(date: Date | null | undefined) {
 export function PinForm({
   pin,
   action,
+  seriesOptions = [],
 }: {
   pin?: Pin;
   action: (formData: FormData) => void;
+  seriesOptions?: string[];
 }) {
   return (
     <form action={action} className="space-y-4" encType="multipart/form-data">
@@ -40,10 +43,13 @@ export function PinForm({
         <input
           id="series"
           name="series"
+          list="series-options"
+          autoComplete="off"
           defaultValue={pin?.series ?? ""}
           className={inputClass}
-          placeholder="e.g. Hidden Mickey Series 12"
+          placeholder="Pick an existing series or type a new one"
         />
+        <SeriesDatalist id="series-options" options={seriesOptions} />
       </div>
 
       <div>
