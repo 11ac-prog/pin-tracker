@@ -14,12 +14,19 @@ export default async function DashboardPage() {
     prisma.trade.count(),
   ]);
 
-  const totalPaid = ownedPins.reduce((sum, p) => sum + (lineTotal(p.pricePaid, p.quantity) ?? 0), 0);
+  // Cost of what you still own: what unrealized gain is measured against.
+  const ownedCost = ownedPins.reduce((sum, p) => sum + (lineTotal(p.pricePaid, p.quantity) ?? 0), 0);
+  // All-time spend: pins you've sold still count, so a sale never lowers it.
+  // (A sold pin keeps its cost on its own row — a partial sale just splits
+  // the quantity between the owned and sold rows — and trades carry cost
+  // from the pins given to the pins received, so this stays put through both.)
+  const soldCost = soldPins.reduce((sum, p) => sum + (lineTotal(p.pricePaid, p.quantity) ?? 0), 0);
+  const totalPaid = ownedCost + soldCost;
   const totalWorth = ownedPins.reduce(
     (sum, p) => sum + (lineTotal(p.currentValue, p.quantity) ?? lineTotal(p.pricePaid, p.quantity) ?? 0),
     0,
   );
-  const unrealizedGain = totalWorth - totalPaid;
+  const unrealizedGain = totalWorth - ownedCost;
   const realizedProfit = soldPins.reduce(
     (sum, p) =>
       sum +
@@ -33,7 +40,7 @@ export default async function DashboardPage() {
 
   const stats = [
     { label: "Pins in collection", value: ownedPins.length.toString() },
-    { label: "Total paid", value: formatCurrency(totalPaid) },
+    { label: "Total paid", value: formatCurrency(totalPaid), hint: "All-time, including pins you've sold" },
     { label: "Estimated worth", value: formatCurrency(totalWorth) },
     {
       label: "Unrealized gain / loss",
@@ -63,6 +70,7 @@ export default async function DashboardPage() {
             <div className={`mt-1 text-2xl font-bold ${stat.tone ?? "text-slate-100"}`}>
               {stat.value}
             </div>
+            {"hint" in stat ? <div className="text-xs text-slate-500">{stat.hint}</div> : null}
           </div>
         ))}
       </div>
