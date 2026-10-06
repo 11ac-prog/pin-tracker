@@ -179,6 +179,94 @@ export async function sellPin(formData: FormData) {
   redirect("/sold");
 }
 
+// Splits a total across lines in proportion to `weights`, to the cent, with
+// any rounding leftover landing on the last line so the parts add back up.
+function allocate(total: number | null, weights: number[]): (number | null)[] {
+  if (total === null) return weights.map(() => null);
+  const weightSum = weights.reduce((sum, w) => sum + w, 0);
+  const totalCents = Math.round(total * 100);
+  let allocated = 0;
+  return weights.map((w, i) => {
+    const cents =
+      i === weights.length - 1
+        ? totalCents - allocated
+        : Math.round((totalCents * (weightSum > 0 ? w / weightSum : 1 / weights.length)));
+    allocated += cents;
+    return cents / 100;
+  });
+}
+
+// Sells several pins as one sale: one price, one fee, one shipping cost for
+// the whole set. Each pin's row records its share (proportional to what you
+// paid for the units sold, or an even split per unit if any has no cost), so
+// the Sold page's per-row math keeps working and the shares sum to exactly
+// what you entered.
+export async function sellPins(formData: FormData) {
+  const soldPrice = parseOptionalFloat(formData.get("soldPrice"));
+  if (soldPrice === null) throw new Error("Sale price is required");
+  const soldDate = parseOptionalDate(formData.get("soldDate")) ?? new Date();
+  const shippingCost = parseOptionalFloat(formData.get("shippingCost"));
+  const soldFee = parseOptionalFloat(formData.get("soldFee"));
+
+  const ids = formData.getAll("pinId").map(String);
+  const requested = formData.getAll("qty").map((q) => Number(q));
+  const wanted = new Map<string, number>();
+  ids.forEach((id, i) => {
+    if (id && !wanted.has(id)) wanted.set(id, requested[i]);
+  });
+  if (wanted.size === 0) throw new Error("Pick at least one pin to sell");
+
+  const pins = await prisma.pin.findMany({
+    where: { id: { in: Array.from(wanted.keys()) }, status: PinStatus.OWNED },
+  });
+  if (pins.length === 0) throw new Error("None of those pins are available to sell");
+
+  const lines = pins.map((pin) => {
+    const asked = wanted.get(pin.id) ?? pin.quantity;
+    const soldQuantity = Math.min(Math.max(Math.round(Number.isFinite(asked) ? asked : pin.quantity), 1), pin.quantity);
+    return { pin, soldQuantity };
+  });
+
+  const allCosted = lines.every(({ pin }) => (pin.pricePaid ?? 0) > 0);
+  const weights = lines.map(({ pin, soldQuantity }) =>
+    allCosted ? (pin.pricePaid ?? 0) * soldQuantity : soldQuantity,
+  );
+  const prices = allocate(soldPrice, weights);
+  const fees = allocate(soldFee, weights);
+  const shippings = allocate(shippingCost, weights);
+
+  const operations = lines.flatMap(({ pin, soldQuantity }, i) => {
+    const sale = { soldPrice: prices[i], soldDate, shippingCost: shippings[i], soldFee: fees[i] };
+    if (soldQuantity >= pin.quantity) {
+      return [prisma.pin.update({ where: { id: pin.id }, data: { status: PinStatus.SOLD, ...sale } })];
+    }
+    return [
+      prisma.pin.update({ where: { id: pin.id }, data: { quantity: pin.quantity - soldQuantity } }),
+      prisma.pin.create({
+        data: {
+          name: pin.name,
+          series: pin.series,
+          imageUrl: pin.imageUrl,
+          acquisitionDate: pin.acquisitionDate,
+          acquisitionMethod: pin.acquisitionMethod,
+          quantity: soldQuantity,
+          pricePaid: pin.pricePaid,
+          currentValue: pin.currentValue,
+          notes: pin.notes,
+          status: PinStatus.SOLD,
+          ...sale,
+        },
+      }),
+    ];
+  });
+  await prisma.$transaction(operations);
+
+  revalidatePath("/pins");
+  revalidatePath("/sold");
+  revalidatePath("/");
+  redirect("/sold");
+}
+
 export async function restorePin(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing pin id");

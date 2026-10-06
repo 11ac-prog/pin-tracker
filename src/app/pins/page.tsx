@@ -3,7 +3,7 @@ import Link from "next/link";
 import { formatCurrency, formatDate, gainLabel, gainToneClass, lineTotal } from "@/lib/format";
 import { addPurchaseAction, deletePin } from "./actions";
 import { DeleteButton } from "@/components/DeleteButton";
-import { cardClass, primaryButtonClass } from "@/components/form";
+import { cardClass, primaryButtonClass, secondaryButtonClass } from "@/components/form";
 import { PinStatus, type Pin } from "@/generated/prisma/client";
 import { DeleteIcon, EditIcon, SellIcon, TradeIcon } from "@/components/icons";
 import { MethodBadge } from "@/components/pins/MethodBadge";
@@ -120,6 +120,9 @@ export default async function PinsPage(props: PageProps<"/pins">) {
               List
             </Link>
           </div>
+          <Link href="/pins/sell" className={secondaryButtonClass}>
+            Sell multiple
+          </Link>
           <Link href="/pins/new" className={primaryButtonClass}>
             + Add pin
           </Link>
