@@ -87,7 +87,7 @@ export default async function PinsPage(props: PageProps<"/pins">) {
 
   return (
     <div className="space-y-6">
-      <CollectionScroll />
+      <CollectionScroll url={viewHref(view)} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-100">Collection</h1>

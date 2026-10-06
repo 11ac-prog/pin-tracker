@@ -9,9 +9,10 @@ const MAX_AGE_MS = 10 * 60 * 1000;
 // Remembers where you were in the collection when you open a pin (or its
 // edit/sell/trade pages) and puts you back there when you return. The saved
 // position is used once and only if it's recent and for the same view/search.
-export function CollectionScroll() {
+// `url` is this page's view+search as rendered by the server; using it instead
+// of window.location avoids racing with Next updating the address bar.
+export function CollectionScroll({ url }: { url: string }) {
   useEffect(() => {
-    const url = window.location.pathname + window.location.search;
     try {
       sessionStorage.setItem(LAST_URL_KEY, url);
       const raw = sessionStorage.getItem(SCROLL_KEY);
@@ -35,7 +36,7 @@ export function CollectionScroll() {
           SCROLL_KEY,
           JSON.stringify({
             y: window.scrollY,
-            url: window.location.pathname + window.location.search,
+            url,
             at: Date.now(),
           }),
         );
@@ -46,7 +47,7 @@ export function CollectionScroll() {
 
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
-  }, []);
+  }, [url]);
 
   return null;
 }
