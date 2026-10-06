@@ -64,6 +64,24 @@ export function SellForm({
       </div>
 
       <div>
+        <label className={labelClass} htmlFor="soldFee">
+          Selling fee ($)
+        </label>
+        <input
+          id="soldFee"
+          name="soldFee"
+          type="number"
+          step="0.01"
+          min="0"
+          className={inputClass}
+          placeholder="Platform or payment fees taken out of the sale"
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          Subtracted from the sale price when working out your profit.
+        </p>
+      </div>
+
+      <div>
         <label className={labelClass} htmlFor="shippingCost">
           Shipping cost ($)
         </label>

@@ -123,6 +123,7 @@ export async function sellPin(formData: FormData) {
   if (soldPrice === null) throw new Error("Sale price is required");
   const soldDate = parseOptionalDate(formData.get("soldDate")) ?? new Date();
   const shippingCost = parseOptionalFloat(formData.get("shippingCost"));
+  const soldFee = parseOptionalFloat(formData.get("soldFee"));
 
   const pin = await prisma.pin.findUnique({ where: { id } });
   if (!pin) throw new Error("Pin not found");
@@ -137,7 +138,7 @@ export async function sellPin(formData: FormData) {
     // Selling the whole line: this row just becomes the sold record.
     await prisma.pin.update({
       where: { id },
-      data: { status: PinStatus.SOLD, soldPrice, soldDate, shippingCost },
+      data: { status: PinStatus.SOLD, soldPrice, soldDate, shippingCost, soldFee },
     });
   } else {
     // Selling part of a multi-quantity pin: split the sold portion into its
@@ -166,6 +167,7 @@ export async function sellPin(formData: FormData) {
           soldPrice,
           soldDate,
           shippingCost,
+          soldFee,
         },
       }),
     ]);
@@ -183,7 +185,7 @@ export async function restorePin(formData: FormData) {
 
   await prisma.pin.update({
     where: { id },
-    data: { status: PinStatus.OWNED, soldPrice: null, soldDate: null, shippingCost: null },
+    data: { status: PinStatus.OWNED, soldPrice: null, soldDate: null, shippingCost: null, soldFee: null },
   });
 
   revalidatePath("/pins");

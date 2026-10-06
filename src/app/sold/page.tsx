@@ -16,7 +16,8 @@ export default async function SoldPage() {
   const totalPaid = soldPins.reduce((sum, p) => sum + (lineTotal(p.pricePaid, p.quantity) ?? 0), 0);
   const totalSold = soldPins.reduce((sum, p) => sum + (p.soldPrice ?? 0), 0);
   const totalShipping = soldPins.reduce((sum, p) => sum + (p.shippingCost ?? 0), 0);
-  const totalProfit = totalSold - totalPaid - totalShipping;
+  const totalFees = soldPins.reduce((sum, p) => sum + (p.soldFee ?? 0), 0);
+  const totalProfit = totalSold - totalPaid - totalShipping - totalFees;
 
   return (
     <div className="space-y-6">
@@ -42,7 +43,7 @@ export default async function SoldPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div className={`${cardClass} p-4`}>
               <div className={statLabelClass}>Total paid</div>
               <div className="mt-1 text-2xl font-bold text-slate-100">
@@ -53,6 +54,12 @@ export default async function SoldPage() {
               <div className={statLabelClass}>Total sold for</div>
               <div className="mt-1 text-2xl font-bold text-slate-100">
                 {formatCurrency(totalSold)}
+              </div>
+            </div>
+            <div className={`${cardClass} p-4`}>
+              <div className={statLabelClass}>Selling fees</div>
+              <div className="mt-1 text-2xl font-bold text-slate-100">
+                {formatCurrency(totalFees)}
               </div>
             </div>
             <div className={`${cardClass} p-4`}>
@@ -87,6 +94,7 @@ export default async function SoldPage() {
                     <th className="px-4 py-3">Sold on</th>
                     <th className="px-4 py-3 text-right">Paid</th>
                     <th className="px-4 py-3 text-right">Sold for</th>
+                    <th className="px-4 py-3 text-right">Fee</th>
                     <th className="px-4 py-3 text-right">Shipping</th>
                     <th className="px-4 py-3 text-right">Profit</th>
                     <th className="px-4 py-3" />
@@ -97,7 +105,7 @@ export default async function SoldPage() {
                     const linePaid = lineTotal(pin.pricePaid, pin.quantity);
                     const profit =
                       pin.soldPrice !== null
-                        ? pin.soldPrice - (linePaid ?? 0) - (pin.shippingCost ?? 0)
+                        ? pin.soldPrice - (pin.soldFee ?? 0) - (linePaid ?? 0) - (pin.shippingCost ?? 0)
                         : null;
                     return (
                       <tr key={pin.id} className="transition hover:bg-white/[0.03]">
@@ -136,6 +144,9 @@ export default async function SoldPage() {
                         </td>
                         <td className="px-4 py-3 text-right text-slate-300">
                           {formatCurrency(pin.soldPrice)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-slate-300">
+                          {formatCurrency(pin.soldFee)}
                         </td>
                         <td className="px-4 py-3 text-right text-slate-300">
                           {formatCurrency(pin.shippingCost)}

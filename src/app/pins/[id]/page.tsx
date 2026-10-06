@@ -36,7 +36,7 @@ export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
   const gain = totalWorth !== null && totalPaid !== null ? totalWorth - totalPaid : null;
   const profit =
     pin.status === PinStatus.SOLD && pin.soldPrice !== null
-      ? pin.soldPrice - (totalPaid ?? 0) - (pin.shippingCost ?? 0)
+      ? pin.soldPrice - (pin.soldFee ?? 0) - (totalPaid ?? 0) - (pin.shippingCost ?? 0)
       : null;
 
   return (
@@ -159,6 +159,12 @@ export default async function PinDetailPage(props: PageProps<"/pins/[id]">) {
                       Sold on
                     </dt>
                     <dd className="mt-1 text-slate-200">{formatDate(pin.soldDate)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Fee
+                    </dt>
+                    <dd className="mt-1 text-slate-200">{formatCurrency(pin.soldFee)}</dd>
                   </div>
                   <div>
                     <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">

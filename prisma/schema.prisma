@@ -50,6 +50,9 @@ model Pin {
   soldPrice         Float?
   soldDate          DateTime?
   shippingCost      Float?
+  // Fees taken out of the sale price (platform/payment fees); subtracted
+  // along with cost and shipping when working out profit.
+  soldFee           Float?
   purchases         Purchase[]
   tradeItems        TradeItem[]
   createdAt         DateTime          @default(now())
