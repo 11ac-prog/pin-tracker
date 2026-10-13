@@ -10,6 +10,7 @@ import { MethodBadge } from "@/components/pins/MethodBadge";
 import { AddPurchaseButton } from "@/components/pins/PurchaseForm";
 import { CollectionScroll } from "@/components/pins/CollectionScroll";
 import { CollectionSearch } from "@/components/pins/CollectionSearch";
+import { NO_SERIES } from "@/lib/collection-filter";
 
 export const dynamic = "force-dynamic";
 
@@ -61,10 +62,17 @@ export default async function PinsPage(props: PageProps<"/pins">) {
   const view = searchParams.view === "list" ? "list" : "cards";
   const q = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
 
-  const [pins, totalOwned] = await Promise.all([
+  const seriesFilter = typeof searchParams.series === "string" ? searchParams.series.trim() : "";
+
+  const [pins, totalOwned, seriesGroups] = await Promise.all([
     prisma.pin.findMany({
       where: {
         status: PinStatus.OWNED,
+        ...(seriesFilter === NO_SERIES
+          ? { OR: [{ series: null }, { series: "" }] }
+          : seriesFilter
+            ? { series: { equals: seriesFilter, mode: "insensitive" } }
+            : {}),
         ...(q
           ? {
               OR: [
@@ -77,11 +85,25 @@ export default async function PinsPage(props: PageProps<"/pins">) {
       orderBy: { createdAt: "desc" },
     }),
     prisma.pin.count({ where: { status: PinStatus.OWNED } }),
+    prisma.pin.groupBy({ by: ["series"], where: { status: PinStatus.OWNED }, _count: { _all: true } }),
   ]);
+
+  // One dropdown entry per series (case-insensitive), with how many pins it holds.
+  const seriesCounts = new Map<string, { name: string; count: number }>();
+  for (const g of seriesGroups) {
+    const name = g.series?.trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const entry = seriesCounts.get(key);
+    if (entry) entry.count += g._count._all;
+    else seriesCounts.set(key, { name, count: g._count._all });
+  }
+  const seriesOptions = Array.from(seriesCounts.values()).sort((a, b) => a.name.localeCompare(b.name));
 
   const viewHref = (v: "cards" | "list") => {
     const params = new URLSearchParams({ view: v });
     if (q) params.set("q", q);
+    if (seriesFilter) params.set("series", seriesFilter);
     return `/pins?${params.toString()}`;
   };
 
@@ -92,8 +114,8 @@ export default async function PinsPage(props: PageProps<"/pins">) {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-100">Collection</h1>
           <p className="text-sm text-slate-500">
-            {q
-              ? `${pins.length} of ${totalOwned} pins match "${q}"`
+            {q || seriesFilter
+              ? `${pins.length} of ${totalOwned} pins match your filters`
               : `${pins.length} pin${pins.length === 1 ? "" : "s"} tracked`}
           </p>
         </div>
@@ -129,11 +151,11 @@ export default async function PinsPage(props: PageProps<"/pins">) {
         </div>
       </div>
 
-      <CollectionSearch initialQuery={q} view={view} />
+      <CollectionSearch initialQuery={q} view={view} series={seriesFilter} seriesOptions={seriesOptions} />
 
-      {pins.length === 0 && q ? (
+      {pins.length === 0 && (q || seriesFilter) ? (
         <div className={`${cardClass} border-dashed p-10 text-center text-slate-500`}>
-          No pins match &quot;{q}&quot;.
+          No pins match your filters.
         </div>
       ) : pins.length === 0 ? (
         <div className={`${cardClass} border-dashed p-10 text-center text-slate-500`}>
