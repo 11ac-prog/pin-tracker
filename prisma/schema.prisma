@@ -97,6 +97,9 @@ model Trade {
   partnerName  String?
   notes        String?
   shippingCost Float?
+  // True when this trade's shipping was already spread into the received pins'
+  // own prices, so it must not be added to "total paid" a second time.
+  shippingInPinCost Boolean   @default(false)
   items        TradeItem[]
   createdAt    DateTime    @default(now())
 }

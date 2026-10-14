@@ -7,11 +7,15 @@ import { cardClass, statLabelClass } from "@/components/form";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [ownedPins, soldPins, wishlistCount, tradeCount] = await Promise.all([
+  const [ownedPins, soldPins, wishlistCount, tradeCount, tradeShipping] = await Promise.all([
     prisma.pin.findMany({ where: { status: PinStatus.OWNED }, orderBy: { createdAt: "desc" } }),
     prisma.pin.findMany({ where: { status: PinStatus.SOLD } }),
     prisma.wishlistItem.count(),
     prisma.trade.count(),
+    prisma.trade.findMany({
+      where: { shippingCost: { not: null }, shippingInPinCost: false },
+      select: { shippingCost: true },
+    }),
   ]);
 
   // Cost of what you still own: what unrealized gain is measured against.
@@ -21,7 +25,18 @@ export default async function DashboardPage() {
   // the quantity between the owned and sold rows — and trades carry cost
   // from the pins given to the pins received, so this stays put through both.)
   const soldCost = soldPins.reduce((sum, p) => sum + (lineTotal(p.pricePaid, p.quantity) ?? 0), 0);
-  const totalPaid = ownedCost + soldCost;
+  // Shipping paid on trades is money out too — unless it was already spread
+  // into the received pins' prices (then it's in ownedCost/soldCost already).
+  const tradeShippingCost = tradeShipping.reduce((sum, t) => sum + (t.shippingCost ?? 0), 0);
+  const totalPaid = ownedCost + soldCost + tradeShippingCost;
+  // Cash actually in hand from sales: price minus the fee and shipping you paid.
+  const moneyCollected = soldPins.reduce(
+    (sum, p) => sum + ((p.soldPrice ?? 0) - (p.soldFee ?? 0) - (p.shippingCost ?? 0)),
+    0,
+  );
+  const leftToRecover = Math.max(0, totalPaid - moneyCollected);
+  const recoveredPct = totalPaid > 0 ? Math.min(100, (moneyCollected / totalPaid) * 100) : 0;
+  const freeCollection = totalPaid > 0 && moneyCollected >= totalPaid;
   const totalWorth = ownedPins.reduce(
     (sum, p) => sum + (lineTotal(p.currentValue, p.quantity) ?? lineTotal(p.pricePaid, p.quantity) ?? 0),
     0,
@@ -40,7 +55,8 @@ export default async function DashboardPage() {
 
   const stats = [
     { label: "Pins in collection", value: ownedPins.length.toString() },
-    { label: "Total paid", value: formatCurrency(totalPaid), hint: "All-time, including pins you've sold" },
+    { label: "Total paid", value: formatCurrency(totalPaid), hint: "All-time: pins (sold ones too) plus trade shipping" },
+    { label: "Money collected", value: formatCurrency(moneyCollected), hint: "From sales, after fees and shipping" },
     { label: "Estimated worth", value: formatCurrency(totalWorth) },
     {
       label: "Unrealized gain / loss",
@@ -73,6 +89,40 @@ export default async function DashboardPage() {
             {"hint" in stat ? <div className="text-xs text-slate-500">{stat.hint}</div> : null}
           </div>
         ))}
+      </div>
+
+      <div className={`${cardClass} p-4`}>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div className={statLabelClass}>Free collection goal</div>
+          <div className="text-xs text-slate-500">
+            {formatCurrency(moneyCollected)} collected of {formatCurrency(totalPaid)} spent
+          </div>
+        </div>
+        <div
+          className="mt-3 h-3 overflow-hidden rounded-full bg-white/10"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(recoveredPct)}
+          aria-label="Share of your spending recovered through sales"
+        >
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"
+            style={{ width: `${recoveredPct}%` }}
+          />
+        </div>
+        <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
+          {freeCollection ? (
+            <div className="text-lg font-bold text-emerald-400">
+              Your collection is free — {formatCurrency(moneyCollected - totalPaid)} ahead
+            </div>
+          ) : (
+            <div className="text-lg font-bold text-slate-100">
+              {formatCurrency(leftToRecover)} left to recover
+            </div>
+          )}
+          <div className="text-sm text-slate-400">{recoveredPct.toFixed(1)}% recovered</div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
