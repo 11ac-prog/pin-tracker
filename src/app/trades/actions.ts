@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { TradeDirection, AcquisitionMethod } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { addPurchase, deletePurchase } from "@/lib/purchases";
+import { addPurchase, deletePurchase, updatePurchase } from "@/lib/purchases";
 
 function parseOptionalFloat(value: FormDataEntryValue | null): number | null {
   if (!value || value === "") return null;
@@ -117,8 +117,16 @@ export async function createTrade(formData: FormData) {
     return totalCostBasis / receivedToCollection.length;
   }
 
+  // Shipping paid on a trade is part of what the received pins cost you, so it
+  // is spread evenly (per pin) over the received pins that go into the
+  // collection. The trade is flagged so the dashboard doesn't count it twice.
+  const receivedQty = receivedToCollection.reduce((sum, item) => sum + item.quantity, 0);
+  const spreadShipping = (shippingCost ?? 0) > 0 && receivedQty > 0;
+  const shippingShareFor = (item: ParsedItem) =>
+    spreadShipping ? ((shippingCost ?? 0) * item.quantity) / receivedQty : 0;
+
   const trade = await prisma.trade.create({
-    data: { date, partnerName, notes, shippingCost },
+    data: { date, partnerName, notes, shippingCost, shippingInPinCost: spreadShipping },
   });
 
   for (const item of givenItems) {
@@ -199,7 +207,11 @@ export async function createTrade(formData: FormData) {
 
     if (newPinId) {
       const costBasisTotal = costBasisTotalFor(item);
-      const pricePaid = costBasisTotal !== null ? costBasisTotal / item.quantity : null;
+      const shippingShare = shippingShareFor(item);
+      const pricePaid =
+        costBasisTotal !== null || shippingShare > 0
+          ? ((costBasisTotal ?? 0) + shippingShare) / item.quantity
+          : null;
       await addPurchase(newPinId, {
         quantity: item.quantity,
         pricePaid,
@@ -245,8 +257,43 @@ export async function updateTrade(formData: FormData) {
     .map((s) => s.trim())
     .filter(Boolean);
 
+  // Keep the received pins' cost in step when this trade's shipping changes:
+  // trades that already spread their shipping get the difference spread too,
+  // and a trade that had no shipping yet gets it spread now (older trades keep
+  // their shipping separate, since their pins weren't tracked per trade).
+  const existing = await prisma.trade.findUnique({ where: { id }, include: { items: true } });
+  let shippingInPinCost = existing?.shippingInPinCost ?? false;
+  if (existing) {
+    const oldShipping = existing.shippingCost ?? 0;
+    const newShipping = shippingCost ?? 0;
+    const delta = newShipping - oldShipping;
+    const receivedItemIds = existing.items
+      .filter((item) => item.direction === TradeDirection.RECEIVED)
+      .map((item) => item.id);
+    const purchases =
+      delta !== 0 && (shippingInPinCost || oldShipping === 0)
+        ? await prisma.purchase.findMany({ where: { tradeItemId: { in: receivedItemIds } } })
+        : [];
+    const totalQty = purchases.reduce((sum, p) => sum + p.quantity, 0);
+    if (totalQty > 0) {
+      for (const purchase of purchases) {
+        await updatePurchase(purchase.id, {
+          quantity: purchase.quantity,
+          pricePaid: Math.max(0, (purchase.pricePaid ?? 0) + delta / totalQty),
+          acquisitionDate: purchase.acquisitionDate,
+          acquisitionMethod: purchase.acquisitionMethod,
+          notes: purchase.notes,
+        });
+      }
+      shippingInPinCost = newShipping > 0;
+    }
+  }
+
   await prisma.$transaction([
-    prisma.trade.update({ where: { id }, data: { date, partnerName, notes, shippingCost } }),
+    prisma.trade.update({
+      where: { id },
+      data: { date, partnerName, notes, shippingCost, shippingInPinCost },
+    }),
     ...itemIds.map((itemId) =>
       prisma.tradeItem.update({
         where: { id: itemId },
@@ -259,6 +306,8 @@ export async function updateTrade(formData: FormData) {
   ]);
 
   revalidatePath("/trades");
+  revalidatePath("/pins");
+  revalidatePath("/");
   redirect("/trades");
 }
 

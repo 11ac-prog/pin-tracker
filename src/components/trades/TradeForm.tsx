@@ -373,7 +373,7 @@ export function TradeForm({
           placeholder="What you paid to ship or receive items for this trade"
         />
         <p className="mt-1 text-xs text-slate-500">
-          Counted as an expense against this trade&apos;s net value.
+          Spread evenly over the pins you receive into your collection, so it becomes part of what each one cost you.
         </p>
       </div>
 
