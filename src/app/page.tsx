@@ -37,11 +37,12 @@ export default async function DashboardPage() {
   const leftToRecover = Math.max(0, totalPaid - moneyCollected);
   const recoveredPct = totalPaid > 0 ? Math.min(100, (moneyCollected / totalPaid) * 100) : 0;
   const freeCollection = totalPaid > 0 && moneyCollected >= totalPaid;
-  const totalWorth = ownedPins.reduce(
-    (sum, p) => sum + (lineTotal(p.currentValue, p.quantity) ?? lineTotal(p.pricePaid, p.quantity) ?? 0),
-    0,
-  );
-  const unrealizedGain = totalWorth - ownedCost;
+  // Worth is its own thing: only pins with a worth set count here, never
+  // standing in for what was paid. Gain is measured on those same pins.
+  const pricedPins = ownedPins.filter((p) => p.currentValue !== null);
+  const totalWorth = pricedPins.reduce((sum, p) => sum + (lineTotal(p.currentValue, p.quantity) ?? 0), 0);
+  const pricedCost = pricedPins.reduce((sum, p) => sum + (lineTotal(p.pricePaid, p.quantity) ?? 0), 0);
+  const unrealizedGain = totalWorth - pricedCost;
   const realizedProfit = soldPins.reduce(
     (sum, p) =>
       sum +
@@ -57,9 +58,14 @@ export default async function DashboardPage() {
     { label: "Pins in collection", value: ownedPins.length.toString() },
     { label: "Total paid", value: formatCurrency(totalPaid), hint: "All-time: pins (sold ones too) plus trade shipping" },
     { label: "Money collected", value: formatCurrency(moneyCollected), hint: "From sales, after fees and shipping" },
-    { label: "Estimated worth", value: formatCurrency(totalWorth) },
+    {
+      label: "Estimated worth",
+      value: formatCurrency(totalWorth),
+      hint: `${pricedPins.length} of ${ownedPins.length} pins have a worth set`,
+    },
     {
       label: "Unrealized gain / loss",
+      hint: "On the pins that have a worth set",
       value: `${unrealizedGain > 0 ? "+" : ""}${formatCurrency(unrealizedGain)}`,
       tone: unrealizedGain > 0 ? "text-emerald-400" : unrealizedGain < 0 ? "text-rose-400" : "text-slate-100",
     },
@@ -177,8 +183,9 @@ export default async function DashboardPage() {
                       Added {formatDate(pin.createdAt)}
                     </div>
                   </div>
-                  <div className="text-sm text-slate-300">
-                    {formatCurrency(lineTotal(pin.currentValue, pin.quantity) ?? lineTotal(pin.pricePaid, pin.quantity))}
+                  <div className="text-right text-sm text-slate-300">
+                    {formatCurrency(lineTotal(pin.pricePaid, pin.quantity))}
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">paid</div>
                   </div>
                 </li>
               ))}
