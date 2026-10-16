@@ -14,7 +14,7 @@ export function CollectionSearch({
   initialQuery: string;
   view: "cards" | "list";
   series: string;
-  seriesOptions: { name: string; count: number }[];
+  seriesOptions: { name: string; count: number; total: number }[];
 }) {
   const router = useRouter();
   const [value, setValue] = useState(initialQuery);
@@ -59,7 +59,7 @@ export function CollectionSearch({
         <option value="">All collections</option>
         {seriesOptions.map((o) => (
           <option key={o.name} value={o.name}>
-            {o.name} ({o.count})
+            {o.name} ({o.count} different · {o.total} total)
           </option>
         ))}
         <option value={NO_SERIES}>No collection set</option>

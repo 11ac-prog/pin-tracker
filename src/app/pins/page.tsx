@@ -85,18 +85,29 @@ export default async function PinsPage(props: PageProps<"/pins">) {
       orderBy: { createdAt: "desc" },
     }),
     prisma.pin.count({ where: { status: PinStatus.OWNED } }),
-    prisma.pin.groupBy({ by: ["series"], where: { status: PinStatus.OWNED }, _count: { _all: true } }),
+    prisma.pin.groupBy({
+      by: ["series"],
+      where: { status: PinStatus.OWNED },
+      _count: { _all: true },
+      _sum: { quantity: true },
+    }),
   ]);
 
-  // One dropdown entry per series (case-insensitive), with how many pins it holds.
-  const seriesCounts = new Map<string, { name: string; count: number }>();
+  // "Different" = distinct cards; "total" = every physical pin (sum of quantities).
+  const totalOwnedQty = seriesGroups.reduce((sum, g) => sum + (g._sum.quantity ?? 0), 0);
+  const shownQty = pins.reduce((sum, p) => sum + p.quantity, 0);
+
+  // One dropdown entry per series (case-insensitive), with both counts.
+  const seriesCounts = new Map<string, { name: string; count: number; total: number }>();
   for (const g of seriesGroups) {
     const name = g.series?.trim();
     if (!name) continue;
     const key = name.toLowerCase();
     const entry = seriesCounts.get(key);
-    if (entry) entry.count += g._count._all;
-    else seriesCounts.set(key, { name, count: g._count._all });
+    if (entry) {
+      entry.count += g._count._all;
+      entry.total += g._sum.quantity ?? 0;
+    } else seriesCounts.set(key, { name, count: g._count._all, total: g._sum.quantity ?? 0 });
   }
   const seriesOptions = Array.from(seriesCounts.values()).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -115,8 +126,8 @@ export default async function PinsPage(props: PageProps<"/pins">) {
           <h1 className="text-2xl font-bold tracking-tight text-slate-100">Collection</h1>
           <p className="text-sm text-slate-500">
             {q || seriesFilter
-              ? `${pins.length} of ${totalOwned} pins match your filters`
-              : `${pins.length} pin${pins.length === 1 ? "" : "s"} tracked`}
+              ? `${pins.length} of ${totalOwned} different pins match your filters · ${shownQty} total pins`
+              : `${pins.length} different pin${pins.length === 1 ? "" : "s"} · ${shownQty} total pin${shownQty === 1 ? "" : "s"}`}
           </p>
         </div>
         <div className="flex items-center gap-3">

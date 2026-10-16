@@ -53,9 +53,15 @@ export default async function DashboardPage() {
     0,
   );
   const recentPins = ownedPins.slice(0, 5);
+  // Every physical pin (sum of quantities), as opposed to ownedPins.length which counts distinct cards.
+  const totalPins = ownedPins.reduce((sum, p) => sum + p.quantity, 0);
 
   const stats = [
-    { label: "Pins in collection", value: ownedPins.length.toString() },
+    {
+      label: "Pins in collection",
+      value: totalPins.toString(),
+      hint: `${ownedPins.length} different pins`,
+    },
     { label: "Total paid", value: formatCurrency(totalPaid), hint: "All-time: pins (sold ones too) plus trade shipping" },
     { label: "Money collected", value: formatCurrency(moneyCollected), hint: "From sales, after fees and shipping" },
     {
